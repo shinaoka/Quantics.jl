@@ -1,0 +1,20 @@
+name = "MultiScaleSpaceTimes"
+uuid = "24825735-5140-4dcf-98c0-6955101801e8"
+authors = ["Hiroshi Shinaoka <h.shinaoka@gmail.com> and contributors"]
+version = "0.1.0"
+
+[deps]
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SparseIR = "4fe2279e-80f0-4adb-8463-ee114ff56b7d"
+
+[compat]
+ITensors = "0.3"
+SparseIR = "^0.96, 0.97"
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
