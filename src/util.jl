@@ -310,7 +310,7 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
         return matchsiteinds(reverse(M), sites)
     end
 
-    MultiScaleSpaceTimes.isascendingorder(positions) || 
+    MSSTA.isascendingorder(positions) || 
        error("siteinds are not in ascending order!")
     
     M_edge = addedges(M)

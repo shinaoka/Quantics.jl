@@ -1,10 +1,10 @@
 using Test
-using MultiScaleSpaceTimes
+using MSSTA
 using ITensors
 
 @testset "fouriertransform.jl" begin
-    @testset "_qft" for targetfunc in [MultiScaleSpaceTimes._qft_ref, MultiScaleSpaceTimes._qft], sign in [1, -1], nbit in [1, 2, 3]
-    #@testset "_qft" for targetfunc in [MultiScaleSpaceTimes._qft_ref], sign in [1], nbit in [1]
+    @testset "_qft" for targetfunc in [MSSTA._qft_ref, MSSTA._qft], sign in [1, -1], nbit in [1, 2, 3]
+    #@testset "_qft" for targetfunc in [MSSTA._qft_ref], sign in [1], nbit in [1]
         N = 2^nbit
         
         sites = siteinds("Qubit", nbit)

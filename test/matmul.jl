@@ -1,5 +1,5 @@
 using Test
-import MultiScaleSpaceTimes
+import MSSTA
 using ITensors
 using ITensorTDVP
 
@@ -28,13 +28,13 @@ function _matmul_xy(a, b; kwargs...)
     end
 
     csites = [Index(4, "csite,n=$n") for n in 1:nbit]
-    b_ = MultiScaleSpaceTimes.combinesiteinds(b, csites; targetsites=sxy)
+    b_ = MSSTA.combinesiteinds(b, csites; targetsites=sxy)
 
     t_xy = ITensor[]
-    MultiScaleSpaceTimes.tensors_matmul!(t_xy, a, csites; targetsites=sxy)
+    MSSTA.tensors_matmul!(t_xy, a, csites; targetsites=sxy)
 
     t_z = ITensor[]
-    MultiScaleSpaceTimes.tensors_elementwiseprod!(t_z, a; targetsites=sz)
+    MSSTA.tensors_elementwiseprod!(t_z, a; targetsites=sz)
 
     tensors = ITensor[]
     sites_wrk = typeof(sites[1])[]
@@ -46,10 +46,10 @@ function _matmul_xy(a, b; kwargs...)
     end
 
     mpo = MPO(tensors)
-    MultiScaleSpaceTimes.removeedges!(mpo, sites_wrk)
+    MSSTA.removeedges!(mpo, sites_wrk)
     ab_ = apply(mpo, b_; kwargs...)
 
-    return MultiScaleSpaceTimes.splitsiteinds(ab_, sxy; targetcsites=csites)
+    return MSSTA.splitsiteinds(ab_, sxy; targetcsites=csites)
 end
 
 """ Reconstruct 3D matrix """
@@ -62,8 +62,8 @@ function _tomat3(a)
 end
 
 @testset "matmul.jl" begin
-    @testset "matmul" for _matmul in [MultiScaleSpaceTimes.matmul, MultiScaleSpaceTimes.matmul_naive]
-    #@testset "matmul" for _matmul in [MultiScaleSpaceTimes.matmul]
+    @testset "matmul" for _matmul in [MSSTA.matmul, MSSTA.matmul_naive]
+    #@testset "matmul" for _matmul in [MSSTA.matmul]
         nbit = 6
         sites = siteinds("Qubit", nbit)
         csites = [Index(4, "csite=$s") for s in 1:nbit÷2]
@@ -91,11 +91,11 @@ end
         D = 2
         a = randomMPS(sites; linkdims=D)
         b = randomMPS(sites; linkdims=D)
-        mpo_a = MultiScaleSpaceTimes.tompo_matmul(a, csites)
+        mpo_a = MSSTA.tompo_matmul(a, csites)
 
-        b_ = MultiScaleSpaceTimes.combinesiteinds(b, csites)
+        b_ = MSSTA.combinesiteinds(b, csites)
         ab = apply(mpo_a, b_)
-        ab = MultiScaleSpaceTimes.splitsiteind(ab, sites)
+        ab = MSSTA.splitsiteind(ab, sites)
 
         abmat = _tomat(a) * _tomat(b)
         @test _tomat(ab) ≈ abmat
@@ -108,7 +108,7 @@ end
         D = 2
         a = randomMPS(sites; linkdims=D)
         b = randomMPS(sites; linkdims=D)
-        ab = apply(MultiScaleSpaceTimes.tompo_elementwiseprod(a), b)
+        ab = apply(MSSTA.tompo_elementwiseprod(a), b)
 
         ab_ref = _tomat(a) .* _tomat(b)
         @test _tomat(ab) ≈ ab_ref

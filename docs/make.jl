@@ -1,13 +1,13 @@
-using MultiScaleSpaceTimes
+using MSSTA
 using Documenter
 
-DocMeta.setdocmeta!(MultiScaleSpaceTimes, :DocTestSetup, :(using MultiScaleSpaceTimes); recursive=true)
+DocMeta.setdocmeta!(MSSTA, :DocTestSetup, :(using MSSTA); recursive=true)
 
 makedocs(;
-    modules=[MultiScaleSpaceTimes],
+    modules=[MSSTA],
     authors="Hiroshi Shinaoka <h.shinaoka@gmail.com> and contributors",
-    repo="https://github.com/shinaoka/MultiScaleSpaceTimes.jl/blob/{commit}{path}#{line}",
-    sitename="MultiScaleSpaceTimes.jl",
+    repo="https://github.com/shinaoka/MSSTA.jl/blob/{commit}{path}#{line}",
+    sitename="MSSTA.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         assets=String[],

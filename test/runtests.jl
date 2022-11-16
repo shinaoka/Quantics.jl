@@ -1,7 +1,7 @@
 using Test
-using MultiScaleSpaceTimes
+using MSSTA
 
-@testset "MultiScaleSpaceTimes.jl" begin
+@testset "MSSTA.jl" begin
     include("util.jl")
     include("arithmetic.jl")
     include("fouriertransform.jl")

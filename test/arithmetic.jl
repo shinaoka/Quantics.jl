@@ -1,6 +1,6 @@
 using Test
 using ITensors
-using MultiScaleSpaceTimes
+using MSSTA
 
 @testset "arithmetic.jl" begin
     #=
@@ -10,7 +10,7 @@ using MultiScaleSpaceTimes
         site_a = Index(2, "site_a")
         site_b = Index(2, "site_b")
         site_out = Index(2, "site_out")
-        adder = MultiScaleSpaceTimes._adder_single_tensor(link_in, link_out, site_a, site_b, site_out)
+        adder = MSSTA._adder_single_tensor(link_in, link_out, site_a, site_b, site_out)
         @test size(adder) == (2, 2, 2, 2, 2)
         for (cin, a, b, out, cout) in [
                 (0, 0, 0, 0, 0),
@@ -47,7 +47,7 @@ using MultiScaleSpaceTimes
         rsites = reverse(sites)
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1
-            M = MultiScaleSpaceTimes.binaryop_mpo(
+            M = MSSTA.binaryop_mpo(
                 sites, [(a,b),(c,d)], [(1,2),(1,2)]; rev_carrydirec=rev_carrydirec)
 
             f = randomMPS(sites)

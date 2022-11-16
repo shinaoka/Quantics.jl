@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = MultiScaleSpaceTimes
+CurrentModule = MSSTA
 ```
 
 # SparseIR
 
-Documentation for [MultiScaleSpaceTimes](https://github.com/shinaoka/MultiScaleSpaceTimes.jl).
+Documentation for [MSSTA](https://github.com/shinaoka/MSSTA.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [MultiScaleSpaceTimes]
+Modules = [MSSTA]
 ```

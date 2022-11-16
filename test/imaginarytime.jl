@@ -1,5 +1,5 @@
 using Test
-using MultiScaleSpaceTimes
+using MSSTA
 import ITensors: siteinds, Index
 import ITensors
 import SparseIR: Fermionic, Bosonic, FermionicFreq, valueim
@@ -32,7 +32,7 @@ end
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
         sites = siteinds("Qubit", nbit)
-        gtau_mps = MultiScaleSpaceTimes.decompose_gtau(gtau_smpl, sites; cutoff = 1e-20)
+        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sites; cutoff = 1e-20)
 
         gtau_smpl_reconst = vec(Array(reduce(*, gtau_mps), reverse(sites)...))
 
@@ -48,9 +48,9 @@ end
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
         sites = [Index(2, "Qubit,τ=$t,iω=$(nbit+1-t)") for t in 1:nbit]
-        gtau_mps = MultiScaleSpaceTimes.decompose_gtau(gtau_smpl, sites; cutoff = 1e-20)
-        ft = MultiScaleSpaceTimes.ImaginaryTimeFT(MultiScaleSpaceTimes.FTCore(sites))
-        giv_mps = MultiScaleSpaceTimes.to_wn(Fermionic(), ft, gtau_mps, β; cutoff = 1e-20)
+        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sites; cutoff = 1e-20)
+        ft = MSSTA.ImaginaryTimeFT(MSSTA.FTCore(sites))
+        giv_mps = MSSTA.to_wn(Fermionic(), ft, gtau_mps, β; cutoff = 1e-20)
 
         # w_Q, ..., w_1
         giv =  vec(Array(reduce(*, giv_mps), sites...))
@@ -74,11 +74,11 @@ end
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
         sites = [Index(2, "Qubit,τ=$t,iω=$(nbit+1-t)") for t in 1:nbit]
-        giv_mps = MultiScaleSpaceTimes.decompose_giv(giv_smpl, sites; cutoff = 1e-20)
+        giv_mps = MSSTA.decompose_giv(giv_smpl, sites; cutoff = 1e-20)
 
-        ftcore = MultiScaleSpaceTimes.FTCore(sites)
-        ft = MultiScaleSpaceTimes.ImaginaryTimeFT(ftcore)
-        gtau_mps = MultiScaleSpaceTimes.to_tau(Fermionic(), ft, giv_mps, β; cutoff = 1e-20)
+        ftcore = MSSTA.FTCore(sites)
+        ft = MSSTA.ImaginaryTimeFT(ftcore)
+        gtau_mps = MSSTA.to_tau(Fermionic(), ft, giv_mps, β; cutoff = 1e-20)
 
         # tau_Q, ..., tau_1
         #println("1 ", inds(t))

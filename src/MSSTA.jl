@@ -1,4 +1,4 @@
-module MultiScaleSpaceTimes
+module MSSTA
 
 using ITensors
 import ITensors

@@ -1,4 +1,4 @@
-name = "MultiScaleSpaceTimes"
+name = "MSSTA"
 uuid = "24825735-5140-4dcf-98c0-6955101801e8"
 authors = ["Hiroshi Shinaoka <h.shinaoka@gmail.com> and contributors"]
 version = "0.1.0"

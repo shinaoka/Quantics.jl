@@ -1,5 +1,5 @@
 using Test
-import MultiScaleSpaceTimes
+import MSSTA
 using ITensors
 
 @testset "util.jl" begin
@@ -10,7 +10,7 @@ using ITensors
         #@show sites
 
         sites2 = [Index(2, "n=$n") for n in 1:nbit]
-        MultiScaleSpaceTimes.replace_mpo_siteinds!(M, sites, sites2)
+        MSSTA.replace_mpo_siteinds!(M, sites, sites2)
 
         @test all([!hasind(M[n], sites[n]) for n in 1:nbit])
         @test all([!hasind(M[n], sites[n]') for n in 1:nbit])
@@ -25,7 +25,7 @@ using ITensors
         csites = [Index(4, "csite=$s") for s in 1:2]
         M = randomMPS(sites; linkdims=2)
 
-        Mc = MultiScaleSpaceTimes.combinesiteinds(M, csites; targetsites=sites[2:5])
+        Mc = MSSTA.combinesiteinds(M, csites; targetsites=sites[2:5])
 
         @test length(Mc) == 4
         @test all(dim.(siteinds(Mc)) .== [2, 4, 4, 2])
@@ -36,10 +36,10 @@ using ITensors
         csites = [Index(4, "csite=$s") for s in 1:nbit÷2]
         D = 3
         mps = randomMPS(csites; linkdims=D)
-        mps_split = MultiScaleSpaceTimes.splitsiteind(mps, sites)
+        mps_split = MSSTA.splitsiteind(mps, sites)
         @test vec(Array(reduce(*, mps_split), sites)) ≈ vec(Array(reduce(*, mps), csites))
 
-        mps_reconst = MultiScaleSpaceTimes.combinesiteinds(mps_split, csites)
+        mps_reconst = MSSTA.combinesiteinds(mps_split, csites)
         @test vec(Array(reduce(*, mps_reconst), csites)) ≈ vec(Array(reduce(*, mps), csites))
     end
 
@@ -47,7 +47,7 @@ using ITensors
         nbit = 3
         sites = siteinds("Qubit", nbit)
         a = randomMPS(sites; linkdims=3)
-        l = MultiScaleSpaceTimes._linkinds(a, sites)
+        l = MSSTA._linkinds(a, sites)
         @test all(hastags.(l, "Link"))
         @test length(l) == nbit-1
     end
@@ -56,8 +56,8 @@ using ITensors
         nbit = 3
         sites = siteinds("Qubit", nbit)
         a = randomMPS(sites; linkdims=3)
-        MultiScaleSpaceTimes.addedges!(a)
-        l = MultiScaleSpaceTimes._linkinds(a, sites)
+        MSSTA.addedges!(a)
+        l = MSSTA._linkinds(a, sites)
         #@show a
         #@show l
         #@show length(l)
@@ -69,7 +69,7 @@ using ITensors
         nsite = 6
         sites = [Index(2, "Qubit, site=$n") for n in 1:nsite]
         tensor = randomITensor(sites)
-        tensors = MultiScaleSpaceTimes.split_tensor(tensor, [sites[1:2], sites[3:4], sites[5:6]])
+        tensors = MSSTA.split_tensor(tensor, [sites[1:2], sites[3:4], sites[5:6]])
         @test tensor ≈ reduce(*, tensors)
     end
 
@@ -81,7 +81,7 @@ using ITensors
         sites_sub = sites[1:2:end]
         M = randomMPS(sites_sub) + randomMPS(sites_sub)
 
-        M_ext = MultiScaleSpaceTimes.matchsiteinds(M, sites)
+        M_ext = MSSTA.matchsiteinds(M, sites)
 
         tensor = Array(reduce(*, M), sites_sub)
         tensor_reconst = zeros(Float64, fill(physdim, 2N)...)
@@ -100,7 +100,7 @@ using ITensors
         sites_B = sites[2:2:end]
         M = randomMPO(sites_A) + randomMPO(sites_A)
 
-        M_ext = MultiScaleSpaceTimes.matchsiteinds(M, sites)
+        M_ext = MSSTA.matchsiteinds(M, sites)
 
         tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_B] )
         tensor_reconst = reduce(*, M_ext)

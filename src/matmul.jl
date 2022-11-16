@@ -6,12 +6,12 @@ function matmul(a::MPS, b::MPS; kwargs...)
     halfN = N ÷ 2
 
     csites = [Index(4, "csite=$s") for s in 1:halfN]
-    mpo_a = MultiScaleSpaceTimes.tompo_matmul(a, csites)
+    mpo_a = MSSTA.tompo_matmul(a, csites)
 
-    b_ = MultiScaleSpaceTimes.combinesiteinds(b, csites)
+    b_ = MSSTA.combinesiteinds(b, csites)
 
     ab = apply(mpo_a, b_; kwargs...)
-    res = MultiScaleSpaceTimes.splitsiteind(ab, siteinds(a))
+    res = MSSTA.splitsiteind(ab, siteinds(a))
     return res
 end
 
@@ -25,8 +25,8 @@ function matmul_naive(a::MPS, b::MPS)
     ab_tensors = ITensor[]
     sitesa = siteinds(a)
     sitesb = siteinds(b)
-    linksa = MultiScaleSpaceTimes.links(a)
-    linksb = MultiScaleSpaceTimes.links(b)
+    linksa = MSSTA.links(a)
+    linksb = MSSTA.links(b)
     newlinks = _mklinks([dim(linksa[2n]) * dim(linksb[2n]) for n in 1:halfN-1])
     newsites = [Index(4, "csite=$s") for s in 1:halfN]
     

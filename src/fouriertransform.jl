@@ -77,7 +77,7 @@ function _qft_nsite1_wo_norm(sites; sign::Int=1, inputorder=:normal)
         arr[out, in] = _exp(out, in)
     end
 
-    M = MultiScaleSpaceTimes._zero_mpo(sites)
+    M = MSSTA._zero_mpo(sites)
     _assign!(M, 1, arr)
 
     return M
@@ -150,7 +150,7 @@ function _qft_toplayer(sites; sign::Int=1, inputorder=:normal)
         end
     end
 
-    M = MultiScaleSpaceTimes._zero_mpo(sites; linkdims=fill(2, N-1))
+    M = MSSTA._zero_mpo(sites; linkdims=fill(2, N-1))
     for n in 1:N
         _assign!(M, n, tensors[n])
     end
