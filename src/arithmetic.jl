@@ -131,11 +131,11 @@ function binaryop_mpo(
             )
         link0, link1 = links[n], links[n+1]
         if rev_carrydirec
-            replaceind!(tensor, findindex(tensor, "linkout")=>link0)
-            replaceind!(tensor, findindex(tensor, "linkin")=>link1)
+            replaceind!(tensor, firstind(tensor, "linkout")=>link0)
+            replaceind!(tensor, firstind(tensor, "linkin")=>link1)
         else
-            replaceind!(tensor, findindex(tensor, "linkin")=>link0)
-            replaceind!(tensor, findindex(tensor, "linkout")=>link1)
+            replaceind!(tensor, firstind(tensor, "linkin")=>link0)
+            replaceind!(tensor, firstind(tensor, "linkout")=>link1)
         end
         
         inds_list = [[link0, sites_[1]', sites_[1]]]
