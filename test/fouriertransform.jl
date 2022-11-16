@@ -26,5 +26,5 @@ using ITensors
             @test outfunc ≈ [exp(sign * im * 2π * y * xin/N)/sqrt(N) for y in 0:(N-1)]
         end
     end
-    #@test false
+    @test false
 end

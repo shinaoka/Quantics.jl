@@ -283,3 +283,68 @@ end
 
 # Get bit at pos (>=0). pos=0 is the least significant digit.
 _getbit(i, pos) = ((i & (1 << pos)) >> pos)
+
+
+isascendingorder(x) = issorted(x, lt=isless)
+isdecendingorder(x) = issorted(x, lt=Base.isgreater)
+
+
+function kronecker_deltas(sitesin; sitesout=prime.(noprime.(sitesin)))
+    N = length(sitesout)
+    links = [Index(1, "Link,l=$l") for l in 0:N]
+    M = MPO([delta(links[n], links[n+1], sitesout[n], sitesin[n]) for n in 1:N])
+    M[1] *= onehot(links[1]=>1)
+    M[end] *= onehot(links[end]=>1)
+    return M
+end
+
+
+
+"""
+Match MPS/MPO to the given site indices
+"""
+function matchsiteinds(M::Union{MPS,MPO}, sites)
+    sites = noprime.(sites)
+    positions = Int[findfirst(sites, s) for s in siteinds(M)]
+    if issorted(positions, lt=Base.isgreater)
+        return matchsiteinds(reverse(M), sites)
+    end
+
+    MultiScaleSpaceTimes.isascendingorder(positions) || 
+       error("siteinds are not in ascending order!")
+    
+    M_edge = addedges(M)
+    
+    linkdims_org = dim.(linkinds(M_edge))
+    linkdims_new = ones(Int, length(sites)+1)
+    for n in eachindex(M_edge)
+        p = positions[n]
+        linkdims_new[p] = linkdims_org[n]
+        linkdims_new[p+1] = linkdims_org[n+1]
+    end
+    
+    links = [Index(linkdims_new[l], "Link,l=$(l-1)") for l in eachindex(linkdims_new)]
+    if typeof(M) == MPO
+        tensors = [delta(links[n], links[n+1], sites[n], sites[n]') for n in eachindex(sites)]
+    elseif typeof(M) == MPS
+        tensors = [delta(links[n], links[n+1], sites[n]) for n in eachindex(sites)]
+    end
+    
+    links_old = linkinds(M_edge)
+    for n in eachindex(M_edge)
+        p = positions[n]
+        tensor = copy(M_edge[n])
+        replaceind!(tensor, links_old[n], links[p])
+        replaceind!(tensor, links_old[n+1], links[p+1])
+        if typeof(M) == MPO
+            tensors[p] = permute(tensor, [links[p], links[p+1], sites[p], sites[p]'])
+        elseif typeof(M) == MPS
+            tensors[p] = permute(tensor, [links[p], links[p+1], sites[p]])
+        end
+    end
+    
+    tensors[1] *= onehot(links[1]=>1)
+    tensors[end] *= onehot(links[end]=>1)
+    
+    return MPO(tensors)
+end
