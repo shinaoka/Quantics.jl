@@ -72,4 +72,38 @@ using ITensors
         tensors = MultiScaleSpaceTimes.split_tensor(tensor, [sites[1:2], sites[3:4], sites[5:6]])
         @test tensor ≈ reduce(*, tensors)
     end
+
+    @testset "matchsiteinds_mps" begin
+        N = 2
+        physdim = 2
+
+        sites = [Index(physdim, "n=$n") for n in 1:2N]
+        sites_sub = sites[1:2:end]
+        M = randomMPS(sites_sub) + randomMPS(sites_sub)
+
+        M_ext = MultiScaleSpaceTimes.matchsiteinds(M, sites)
+
+        tensor = Array(reduce(*, M), sites_sub)
+        tensor_reconst = zeros(Float64, fill(physdim, 2N)...)
+        tensor_reconst .= reshape(tensor, size(tensor)..., fill(1, N)...)
+
+        tensor2 = Array(reduce(*, M_ext), sites_sub, sites[2:2:end])
+        @test tensor2 ≈ tensor_reconst
+    end
+
+    @testset "matchsiteinds_mpo" begin
+        N = 2
+        physdim = 2
+
+        sites = [Index(physdim, "n=$n") for n in 1:2N]
+        sites_A = sites[1:2:end]
+        sites_B = sites[2:2:end]
+        M = randomMPO(sites_A) + randomMPO(sites_A)
+
+        M_ext = MultiScaleSpaceTimes.matchsiteinds(M, sites)
+
+        tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_B] )
+        tensor_reconst = reduce(*, M_ext)
+        @test tensor_ref ≈ tensor_reconst
+    end
 end

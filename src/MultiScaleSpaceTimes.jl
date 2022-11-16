@@ -6,6 +6,7 @@ import ITensors.NDTensors: Tensor
 import SparseIR: Fermionic, Bosonic
 import LinearAlgebra: I
 
+include("mpsedge.jl")
 include("util.jl")
 include("arithmetic.jl")
 include("mps.jl")

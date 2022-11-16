@@ -306,7 +306,7 @@ Match MPS/MPO to the given site indices
 function matchsiteinds(M::Union{MPS,MPO}, sites)
     sites = noprime.(sites)
     positions = Int[findfirst(sites, s) for s in siteinds(M)]
-    if issorted(positions, lt=Base.isgreater)
+    if length(M) > 1 && issorted(positions, lt=Base.isgreater)
         return matchsiteinds(reverse(M), sites)
     end
 
@@ -325,9 +325,9 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     
     links = [Index(linkdims_new[l], "Link,l=$(l-1)") for l in eachindex(linkdims_new)]
     if typeof(M) == MPO
-        tensors = [delta(links[n], links[n+1], sites[n], sites[n]') for n in eachindex(sites)]
+        tensors = [delta(links[n], links[n+1]) * delta(sites[n], sites[n]') for n in eachindex(sites)]
     elseif typeof(M) == MPS
-        tensors = [delta(links[n], links[n+1], sites[n]) for n in eachindex(sites)]
+        tensors = [delta(links[n], links[n+1]) * ITensor(1, sites[n]) for n in eachindex(sites)]
     end
     
     links_old = linkinds(M_edge)
