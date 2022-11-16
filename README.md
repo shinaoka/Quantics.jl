@@ -4,4 +4,4 @@
 
 ## Prerequisites
 * ITensors.jl
-* ITensorTDVP.jl (latest commit of the main branch)
+* ITensorTDVP.jl
