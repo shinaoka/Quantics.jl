@@ -105,6 +105,12 @@ git-tree-sha1 = "4cc2bb72df6ff40b055295fdef6d92955f9dede8"
 uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
 version = "1.12.2+2"
 
+[[ITensorTDVP]]
+deps = ["ITensors", "KrylovKit", "Observers", "Printf", "TimerOutputs"]
+git-tree-sha1 = "cefdc1dd1c00ba5c98524fb70654138faab2e2a0"
+uuid = "25707e16-a4db-4a07-99d9-4d67b7af0342"
+version = "0.0.4"
+
 [[ITensors]]
 deps = ["Adapt", "BitIntegers", "ChainRulesCore", "Compat", "Dictionaries", "Functors", "HDF5", "IsApprox", "KrylovKit", "LinearAlgebra", "LinearMaps", "NDTensors", "PackageCompiler", "Pkg", "Printf", "Random", "Requires", "SerializedElementArrays", "SimpleTraits", "StaticArrays", "Strided", "TimerOutputs", "TupleTools", "Zeros", "ZygoteRules"]
 git-tree-sha1 = "abf22bd129d73c0e46eebd82af1865e66cbbe437"
@@ -214,6 +220,11 @@ version = "0.1.44"
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
+
+[[Observers]]
+git-tree-sha1 = "1b36073c8041f9256ae809afe6bfb8fa66fe5eb8"
+uuid = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
+version = "0.0.8"
 
 [[OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
