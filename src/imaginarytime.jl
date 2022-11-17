@@ -9,6 +9,9 @@ struct ImaginaryTimeFT <: AbstractFT
     end
 end
 
+#function to_wn(::Fermionic, gtau::MPS, beta::Float64, tag::String="τ"; nbit=length(gtau), kwargs...)
+    #sites = 
+#end
 
 function to_wn(::Fermionic, ft::ImaginaryTimeFT, gtau::MPS, beta::Float64; kwargs...)
     length(gtau) == nbit(ft) || error("Length mismatch")
@@ -16,7 +19,7 @@ function to_wn(::Fermionic, ft::ImaginaryTimeFT, gtau::MPS, beta::Float64; kwarg
     gtau = noprime(copy(gtau))
 
     N = 2^nbit_
-    sites = extractsites(gtau)
+    sites = siteinds(gtau)
 
     # Apply phase shift to each Qubit
     θ = π * ((-N+1)/N)
@@ -39,10 +42,10 @@ function to_tau(::Fermionic, ft::ImaginaryTimeFT, giv::MPS, beta::Float64; kwarg
     giv = noprime(copy(giv))
 
     N = 2^nbit_
-    sites = extractsites(giv)
+    sites = siteinds(giv)
 
     # Inverse FFT
-    M = backwardmpo(ft.ftcore, sites; inputorder=:reversed)
+    M = backwardmpo(ft.ftcore, sites)
 
     gtau = ITensors.apply(M, giv; kwargs...)
 

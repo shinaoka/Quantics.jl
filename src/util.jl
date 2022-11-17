@@ -302,6 +302,12 @@ end
 
 """
 Match MPS/MPO to the given site indices
+
+MPS:
+   The resultant MPS do not depends on the missing site indices.
+
+MPO:
+   For missing site indices, identity operators are inserted.
 """
 function matchsiteinds(M::Union{MPS,MPO}, sites)
     sites = noprime.(sites)
@@ -347,4 +353,31 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     tensors[end] *= onehot(links[end]=>1)
     
     return MPO(tensors)
+end
+
+
+function findsites_by_tag(sites::Index; tag::String="τ", nbit::Int=length(sites))::Vector{Int}
+    result = Vector{Int}(undef, nbit)
+    for n in 1:nbit
+        tag_ = tag * "=$n"
+        result[n] = findfirst(x->hastags(x, tag_), sites)
+        if result[n] === nothing
+            error("Not found $tag_")
+        end
+    end
+    return result
+end
+
+
+function findallsites_by_tag(sites; tag::String="τ", maxnbit::Int=1000)::Vector{Int}
+    result = Int[]
+    for n in 1:maxnbit
+        tag_ = tag * "=$n"
+        idx = findfirst(x->hastags(x, tag_), sites)
+        if idx === nothing
+            break
+        end
+        push!(result, idx)
+    end
+    return result
 end
