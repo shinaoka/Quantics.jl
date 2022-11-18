@@ -32,28 +32,6 @@ function _qft(sites; cutoff::Float64=1e-14, sign::Int=1)
 end
 
 
-# A brute-force implementation of _qft (only for tests)
-function _qft_ref(sites; cutoff::Float64=1e-14, sign::Int=1)
-    abs(sign) == 1 || error("sign must either 1 or -1")
-
-    nbit = length(sites)
-    N = 2^nbit
-    sites = noprime(sites)
-
-    tmat = zeros(ComplexF64, N, N)
-    for t in 0:N-1, x in 0:N-1
-        tmat[t+1, x+1] = exp(sign * im * 2π * t * x/N)
-    end
-
-    # `tmat`: (y_1, ..., y_N, x_1, ..., x_N)
-    tmat ./= sqrt(N)
-    tmat = reshape(tmat, ntuple(x->2, 2*nbit))
-
-    trans_t = ITensor(tmat, reverse(sites)..., prime(sites)...)
-    M = MPO(trans_t, sites; cutoff=cutoff)
-    return M
-end
-
 
 function _assign!(M::MPO, n::Int, arr; autoreshape=false)
     if autoreshape

@@ -2,29 +2,39 @@ using Test
 using MSSTA
 using ITensors
 
+
+# A brute-force implementation of _qft (only for tests)
+function _qft_ref(sites; cutoff::Float64=1e-14, sign::Int=1)
+    abs(sign) == 1 || error("sign must either 1 or -1")
+
+    nbit = length(sites)
+    N = 2^nbit
+    sites = noprime(sites)
+
+    tmat = zeros(ComplexF64, N, N)
+    for t in 0:N-1, x in 0:N-1
+        tmat[t+1, x+1] = exp(sign * im * 2π * t * x/N)
+    end
+
+    # `tmat`: (y_1, ..., y_N, x_1, ..., x_N)
+    tmat ./= sqrt(N)
+    tmat = reshape(tmat, ntuple(x->2, 2*nbit))
+
+    trans_t = ITensor(tmat, reverse(sites)..., prime(sites)...)
+    M = MPO(trans_t, sites; cutoff=cutoff)
+    return M
+end
+
+
 @testset "fouriertransform.jl" begin
-    @testset "_qft" for targetfunc in [MSSTA._qft_ref, MSSTA._qft], sign in [1, -1], nbit in [1, 2, 3]
+    @testset "qft_mpo" for sign in [1, -1], nbit in [1, 2, 3]
         N = 2^nbit
         
         sites = siteinds("Qubit", nbit)
-        M = targetfunc(sites; sign=sign)
+        M = MSSTA._qft(sites; sign=sign)
+        M_ref = _qft_ref(sites; sign=sign)
 
-        # Return the bit of an integer `i` at the position `pos` (`pos=1` is the least significant digit).
-        bitat(i, pos) = ((i & 1<<(pos-1))>>(pos-1))
-
-        # Input function `f(x)` is 1 only at xin otherwise 0.
-        for xin in [0, 1, N-1]
-            # From left to right (x_1, x_2, ...., x_Q)
-            
-            mpsf = MPS(sites, collect(string(bitat(xin, pos)) for pos in nbit:-1:1))
-            mpsg = reduce(*, apply(M, mpsf))
-    
-            # Values of output function
-            # (k_Q, ...., k_1)
-            outfunc = vec(Array(mpsg, sites))
-    
-            @test outfunc ≈ [exp(sign * im * 2π * y * xin/N)/sqrt(N) for y in 0:(N-1)]
-        end
+        @test Array(reduce(*, M), vcat(sites, sites')) ≈  Array(reduce(*, M_ref), vcat(sites, sites'))
     end
 
     function _ft_1d_ref(X, sign)
@@ -87,7 +97,7 @@ using ITensors
         F = randomMPS(sitesin)
         F_mat = reshape(Array(reduce(*, F), vcat(reverse(sitesx), reverse(sitesy))), N, N)
     
-        # G(kx,ky)
+        # G(kx, ky)
         # G(kx_R, ky_R, ..., kx_1, ky_1)
         G_ = MSSTA.fouriertransform(F; sign=sign, tag="x", sitesdst=siteskx)
         G = MSSTA.fouriertransform(G_; sign=sign, tag="y", sitesdst=sitesky)
