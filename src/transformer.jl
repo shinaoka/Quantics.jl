@@ -30,15 +30,11 @@ end
 
 
 @doc raw"""
+sitesrc[1] / sitesrc[end] corresponds to the most/least significant digit of the input.
 
-sitesrc[1] and sitesrc[end] correspond to the most significant and least significant
-digits of the input, respectively.
-
-sitedst[1] and sitedst[end] correspond to the most significant and least significant
-digits of the output, respectively.
-
+sitesdst[1] / sitesdst[end] corresponds to the most/least significant digit of the output.
 """
-function qft(
+function fouriertransform(
         M::MPS;
         sign::Int=1,
         tag::String="",
@@ -47,6 +43,8 @@ function qft(
         cutoff_MPO=1e-25, kwargs...)
     if tag == "" && sitessrc === nothing
         error("tag or sitesrc must be specified")
+    elseif tag != "" && sitessrc !== nothing
+        error("tag and sitesrc are exclusive")
     end
 
     # Set input site indices
