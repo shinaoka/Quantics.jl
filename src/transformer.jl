@@ -31,7 +31,6 @@ end
 
 @doc raw"""
 sitesrc[1] / sitesrc[end] corresponds to the most/least significant digit of the input.
-
 sitesdst[1] / sitesdst[end] corresponds to the most/least significant digit of the output.
 """
 function fouriertransform(

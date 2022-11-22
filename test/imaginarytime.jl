@@ -94,4 +94,16 @@ end
         @test maximum(abs, (gtau - gtau_smpl)[trunc(Int,0.2*nτ):trunc(Int,0.8*nτ)]) < 1e-2
         #@test false
     end
+
+    @testset "poletomps" begin
+        nqubit = 10
+        sites = siteinds("Qubit", nqubit)
+        β = 10.0
+        ω = 1.2
+        gtau = MSSTA.poletomps(sites, β, ω)
+        gtauvec = vec(Array(reduce(*, gtau), reverse(sites)))
+        gtauf(τ) = -exp(-τ * ω)/(1 + exp(-β * ω))
+        gtauref = gtauf.(LinRange(0, β, 2^nqubit+1)[1:end-1])
+        @test maximum(abs, gtauref .- gtauvec) < 1e-14
+    end
 end
