@@ -177,6 +177,12 @@ function removeedges!(x::MPO, sites)
 end
 
 
+function removeedges!(tensors::Vector{ITensor}, sites)
+    tensors[1] *= onehot(Float64, uniqueind(tensors[1], tensors[2], sites, prime.(sites))=>1)
+    tensors[end] *= onehot(Float64, uniqueind(tensors[end], tensors[end-1], sites, prime.(sites))=>1)
+end
+
+
 function _combinesiteinds(t1::ITensor, t2::ITensor, s1, s2, csite)
     t = t1 * t2
     if dim(t1) == 2

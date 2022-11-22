@@ -46,9 +46,9 @@ using MSSTA
         sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
         rsites = reverse(sites)
 
-        for a in -1:1, b in -1:1, c in -1:1, d in -1:1
+        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             M = MSSTA.binaryop_mpo(
-                sites, [(a,b),(c,d)], [(1,2),(1,2)]; rev_carrydirec=rev_carrydirec)
+                sites, [(a,b),(c,d)], [(1,2),(1,2)]; rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
 
             f = randomMPS(sites)
             g = apply(M, f)
@@ -66,15 +66,19 @@ using MSSTA
             g_vec = reshape(g_arr, 2^nbit, 2^nbit)
 
             function prime_xy(x, y)
-                xp = mod(a * x + b * y, 2^nbit)
-                yp = mod(c * x + d * y, 2^nbit)
-                return xp, yp
+                xp_ = a * x + b * y
+                yp_ = c * x + d * y
+                xp = mod(xp_, 2^nbit)
+                yp = mod(yp_, 2^nbit)
+                return xp, yp,
+                       xp == xp_ ? 1 : bc_x,
+                       yp == yp_ ? 1 : bc_y
             end
 
             g_vec_ref = similar(g_vec)
             for x in 0:2^nbit-1, y in 0:2^nbit-1
-                xp, yp = prime_xy(x, y)
-                g_vec_ref[x+1, y+1] = f_vec[xp+1, yp+1]
+                xp, yp, sign_x, sign_y = prime_xy(x, y)
+                g_vec_ref[x+1, y+1] = f_vec[xp+1, yp+1] * sign_x * sign_y
             end
     
             #@show a, b, c, d
@@ -83,5 +87,6 @@ using MSSTA
 
         #@test false
     end
+    @test false
 
 end
