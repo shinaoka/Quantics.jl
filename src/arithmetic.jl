@@ -31,14 +31,6 @@ function _binaryop_tensor(
     return ITensor(tensor, [link_in, link_out, site_x, site_y, site_out]), link_in, link_out
 end
 
-function _tensor_bc(link; bc=1)
-    (bc == 1 || bc == -1) || error("bc must be either +1 or -1")
-    dim(link) == 3 || error("link must represents -1, 0, 1")
-    tensor = zeros(Float64, 3)
-    tensor[1] = tensor[3] = bc
-    return ITensor(tensor, link)
-end
-
 
 function binaryop_tensor_multisite(
         sites::Vector{Index{T}},
