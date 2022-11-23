@@ -349,7 +349,7 @@ function findsites_by_tag(sites::Index; tag::String="τ",
     result = Vector{Int}(undef, nbit)
     for n in 1:nbit
         tag_ = tag * "=$n"
-        result[n] = findfirst(x -> hastags(x, tag_), sites)
+        result[n] = findfirst(hastags(tag_), sites)
         if result[n] === nothing
             error("Not found $tag_")
         end
@@ -361,7 +361,7 @@ function findallsites_by_tag(sites; tag::String="τ", maxnsites::Int=1000)::Vect
     result = Int[]
     for n in 1:maxnsites
         tag_ = tag * "=$n"
-        idx = findfirst(x -> hastags(x, tag_), sites)
+        idx = findfirst(hastags(tag_), sites)
         if idx === nothing
             break
         end
@@ -373,4 +373,14 @@ end
 function findallsiteinds_by_tag(sites; tag::String="τ", maxnsites::Int=1000)
     positions = findallsites_by_tag(sites; tag=tag, maxnsites=maxnsites)
     return [sites[p] for p in positions]
+end
+
+
+function _convert_to_MPO(tensors::Vector{ITensor})
+    N = length(tensors)
+    M = MPO(N)
+    for n in 1:N
+        M[n] = tensors[n]
+    end
+    return M
 end

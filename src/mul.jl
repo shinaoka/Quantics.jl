@@ -4,8 +4,28 @@ For elementwise/matrix multiplication
 struct Multiplier
 end
 
-function preprosses(mul::Multiplier, M1::MPS, M2::MPS)
+abstract type AbstractMultiplier end
+
+struct MatrixMultiplier{T} <: AbstractMultiplier where {T<:Number}
+    #sites_row::Vector{Index{T}}
+    #sites_shared::Vector{Index{T}}
+    #sites_col::Vector{Index{T}}
+    tag_row::String
+    tag_shared::String
+    tag_col::String
+
+    function MatrixMultiplier(tag_row::String, tag_shared::String, tag_col::String)
+        #function _preprocess_matmul!(tensors1::Vector{ITensor},
+            #tensors2::Vector{ITensor},
+            #sites1,
+            #sites2,
+            #tag_row::String, tag_shared::String, tag_col::String)
+        length(unique([tag_row, tag_shared, tag_col])) == 3 ||
+           error("tag_row, tag_shared, tag_col must be different")
+        new(tag_row, tag_shared, tag_col)
+    end
 end
+
 
 """
 Contract two MPS tensors to form an MPO
@@ -50,4 +70,34 @@ function _preprocess_matmul!(tensors1::Vector{ITensor},
     _preprocess_matmul!(tensors2, sites_col, sites_shared)
 
     return nothing
+end
+
+
+function _postprocess_matmul(
+    M::MPO, sites_row::Vector{Index{T}}, sites_col::Vector{Index{T}})::MPO where T
+    for (s1, s2) in zip(sites_row, sites_col)
+        p = findsite(M, s1)
+        hasind(M[p], s2) || error("$s1 and $s2 are not on the same site")
+
+        indsl = [s1]
+        if p > 1
+            push!(indsl, linkind(M, p-1))
+        end
+
+        indsr = [s2]
+        if p < length(M)
+            push!(indsr, linkind(M, p))
+        end
+
+        Ml, Mr = split_tensor(M[p], [indsl, indsr])
+
+        tensors = ITensors.data(M)
+        deleteat!(tensors, p)
+        insert!(tensors, p, Ml)
+        insert!(tensors, p+1, Mr)
+
+        M = _convert_to_MPO(tensors)
+    end
+
+    return M
 end

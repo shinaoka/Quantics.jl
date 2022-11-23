@@ -186,11 +186,33 @@ end
 
         flag = true
         for n in 1:N
-            flag = flag && hasind(tensors1[n], sitesx[n])
-            flag = flag && hasind(tensors1[n], sitesy[n])
-            flag = flag && hasind(tensors2[n], sitesy[n])
-            flag = flag && hasind(tensors2[n], sitesz[n])
+            flag = flag && hasinds(tensors1[n], sitesx[n], sitesy[n])
+            flag = flag && hasinds(tensors2[n], sitesy[n], sitesz[n])
         end
         @test flag
     end
+
+    @testset "_postprocess_matmul" begin
+        N = 2
+        sitesx = [Index(2, "x=$n") for n in 1:N]
+        sitesy = [Index(2, "y=$n") for n in 1:N]
+
+        links = [Index(1, "Link,l=$l") for l in 0:N]
+        M = MPO(N)
+        for n in 1:N
+            M[n] = randomITensor(links[n], links[n+1], sitesx[n], sitesy[n])
+        end
+
+        M_split = MSSTA._postprocess_matmul(M, sitesx, sitesy)
+
+        flag = true
+        for n in 1:N
+            flag = flag && hasind(M_split[2*n-1], sitesx[n])
+            flag = flag && hasind(M_split[2*n], sitesy[n])
+        end
+        @test flag
+
+    end
+
+    @test false
 end
