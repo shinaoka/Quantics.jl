@@ -8,11 +8,11 @@ import LinearAlgebra: I
 
 include("mpsedge.jl")
 include("util.jl")
-include("arithmetic.jl")
+include("binaryop.jl")
+include("mul.jl")
 include("mps.jl")
 include("mpo.jl")
 include("fouriertransform.jl")
-include("transformer.jl")
 include("imaginarytime.jl")
 include("matmul.jl")
 

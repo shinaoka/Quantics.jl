@@ -15,7 +15,6 @@ function matmul(a::MPS, b::MPS; kwargs...)
     return res
 end
 
-
 function matmul_naive(a::MPS, b::MPS)
     N = length(a)
     mod(N, 2) == 0 || error("Length of a must be even")
@@ -27,25 +26,33 @@ function matmul_naive(a::MPS, b::MPS)
     sitesb = siteinds(b)
     linksa = MSSTA.links(a)
     linksb = MSSTA.links(b)
-    newlinks = _mklinks([dim(linksa[2n]) * dim(linksb[2n]) for n in 1:halfN-1])
+    newlinks = _mklinks([dim(linksa[2n]) * dim(linksb[2n]) for n in 1:(halfN - 1)])
     newsites = [Index(4, "csite=$s") for s in 1:halfN]
-    
+
     for n in 1:halfN
-        a_ = a[2*n-1:2*n] # copy
-        b_ = b[2*n-1:2*n]
+        a_ = a[(2 * n - 1):(2 * n)] # copy
+        b_ = b[(2 * n - 1):(2 * n)]
         cind = Index(2, "Qubit")
-        replaceind!(a_[2], sitesa[2*n], cind)
-        replaceind!(b_[1], sitesb[2*n-1], cind)
+        replaceind!(a_[2], sitesa[2 * n], cind)
+        replaceind!(b_[1], sitesb[2 * n - 1], cind)
         ab_ = a_[1] * ((a_[2] * b_[1]) * b_[2])
         if n == 1
-           ab_ = permute(ab_, [sitesa[2n-1], sitesb[2n], linksa[2n], linksb[2n]])
-           ab_ = ITensor(ITensors.data(ab_), [newsites[n], newlinks[n]])
+            ab_ = permute(ab_, [sitesa[2n - 1], sitesb[2n], linksa[2n], linksb[2n]])
+            ab_ = ITensor(ITensors.data(ab_), [newsites[n], newlinks[n]])
         elseif n == halfN
-           ab_ = permute(ab_, [linksa[2n-2], linksb[2n-2], sitesa[2n-1], sitesb[2n]])
-           ab_ = ITensor(ITensors.data(ab_), [newlinks[n-1], newsites[n]])
+            ab_ = permute(ab_, [linksa[2n - 2], linksb[2n - 2], sitesa[2n - 1], sitesb[2n]])
+            ab_ = ITensor(ITensors.data(ab_), [newlinks[n - 1], newsites[n]])
         else
-           ab_ = permute(ab_, [linksa[2n-2], linksb[2n-2], sitesa[2n-1], sitesb[2n], linksa[2n], linksb[2n]])
-           ab_ = ITensor(ITensors.data(ab_), [newlinks[n-1], newsites[n], newlinks[n]])
+            ab_ = permute(ab_,
+                          [
+                              linksa[2n - 2],
+                              linksb[2n - 2],
+                              sitesa[2n - 1],
+                              sitesb[2n],
+                              linksa[2n],
+                              linksb[2n]
+                          ])
+            ab_ = ITensor(ITensors.data(ab_), [newlinks[n - 1], newsites[n], newlinks[n]])
         end
         push!(ab_tensors, ab_)
     end
@@ -72,13 +79,12 @@ function _tompo_matmul(t1::ITensor, t2::ITensor, sites, links, s)
     return res
 end
 
-
 """
 Create tensors for matmul
 """
 function tensors_matmul!(tensors::Vector{ITensor}, a::MPS, csites; targetsites=siteinds(a))
     sites = siteinds(a)
-    length(targetsites) == 2*length(csites) || error("Length mismatch")
+    length(targetsites) == 2 * length(csites) || error("Length mismatch")
 
     #N = length(a)
     #halfN = N ÷ 2
@@ -86,11 +92,11 @@ function tensors_matmul!(tensors::Vector{ITensor}, a::MPS, csites; targetsites=s
     addedges!(a)
     linksa = _linkinds(a, sites)
     for n in eachindex(csites)
-        startpos = findsite(a, targetsites[2*n-1])
-        targetsites[2*n] == sites[startpos+1] || error("Not found")
+        startpos = findsite(a, targetsites[2 * n - 1])
+        targetsites[2 * n] == sites[startpos + 1] || error("Not found")
         push!(tensors,
-            _tompo_matmul(a[startpos], a[startpos+1], sites[startpos:startpos+1], linksa[startpos:startpos+2], csites[n])
-        )
+              _tompo_matmul(a[startpos], a[startpos + 1], sites[startpos:(startpos + 1)],
+                            linksa[startpos:(startpos + 2)], csites[n]))
     end
     # Hack
     for (n, t) in enumerate(tensors)
@@ -101,7 +107,6 @@ function tensors_matmul!(tensors::Vector{ITensor}, a::MPS, csites; targetsites=s
     return nothing
 end
 
-
 function tompo_matmul(a::MPS, csites; targetsites=siteinds(a))
     tensors = ITensor[]
     tensors_matmul!(tensors, a, csites; targetsites=targetsites)
@@ -109,7 +114,6 @@ function tompo_matmul(a::MPS, csites; targetsites=siteinds(a))
     removeedges!(M, csites)
     return M
 end
-
 
 """
 Create tensors for elementwise product
@@ -135,7 +139,6 @@ function tensors_elementwiseprod!(tensors::Vector{ITensor}, a::MPS; targetsites=
     removeedges!(a, sites)
     return nothing
 end
-
 
 function tompo_elementwiseprod(a::MPS; targetsites=siteinds(a))
     tensors = ITensor[]

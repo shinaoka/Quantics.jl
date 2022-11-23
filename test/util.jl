@@ -33,14 +33,15 @@ using ITensors
 
     @testset "splitsiteind" for nbit in [4, 6]
         sites = siteinds("Qubit", nbit)
-        csites = [Index(4, "csite=$s") for s in 1:nbit÷2]
+        csites = [Index(4, "csite=$s") for s in 1:(nbit ÷ 2)]
         D = 3
         mps = randomMPS(csites; linkdims=D)
         mps_split = MSSTA.splitsiteind(mps, sites)
         @test vec(Array(reduce(*, mps_split), sites)) ≈ vec(Array(reduce(*, mps), csites))
 
         mps_reconst = MSSTA.combinesiteinds(mps_split, csites)
-        @test vec(Array(reduce(*, mps_reconst), csites)) ≈ vec(Array(reduce(*, mps), csites))
+        @test vec(Array(reduce(*, mps_reconst), csites)) ≈
+              vec(Array(reduce(*, mps), csites))
     end
 
     @testset "linkinds" begin
@@ -49,7 +50,7 @@ using ITensors
         a = randomMPS(sites; linkdims=3)
         l = MSSTA._linkinds(a, sites)
         @test all(hastags.(l, "Link"))
-        @test length(l) == nbit-1
+        @test length(l) == nbit - 1
     end
 
     @testset "linkinds2" begin
@@ -62,7 +63,7 @@ using ITensors
         #@show l
         #@show length(l)
         @test all(hastags.(l, "Link"))
-        @test length(l) == nbit+1
+        @test length(l) == nbit + 1
     end
 
     @testset "split_tensor" begin
@@ -77,7 +78,7 @@ using ITensors
         N = 2
         physdim = 2
 
-        sites = [Index(physdim, "n=$n") for n in 1:2N]
+        sites = [Index(physdim, "n=$n") for n in 1:(2N)]
         sites_sub = sites[1:2:end]
         M = randomMPS(sites_sub) + randomMPS(sites_sub)
 
@@ -95,15 +96,25 @@ using ITensors
         N = 2
         physdim = 2
 
-        sites = [Index(physdim, "n=$n") for n in 1:2N]
+        sites = [Index(physdim, "n=$n") for n in 1:(2N)]
         sites_A = sites[1:2:end]
         sites_B = sites[2:2:end]
         M = randomMPO(sites_A) + randomMPO(sites_A)
 
         M_ext = MSSTA.matchsiteinds(M, sites)
 
-        tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_B] )
+        tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_B])
         tensor_reconst = reduce(*, M_ext)
         @test tensor_ref ≈ tensor_reconst
+    end
+
+    @testset "findallsites_by_tag" begin
+        sites = [Index(1, "k=1"), Index(1, "x=1"), Index(1, "k=2")]
+        @test MSSTA.findallsites_by_tag(sites; tag="k") == [1, 3]
+        @test MSSTA.findallsiteinds_by_tag(sites; tag="k") == [sites[1], sites[3]]
+
+        sites = [Index(1, "k=2"), Index(1, "x=1"), Index(1, "k=1")]
+        @test MSSTA.findallsites_by_tag(sites; tag="k") == [3, 1]
+        @test MSSTA.findallsiteinds_by_tag(sites; tag="k") == [sites[3], sites[1]]
     end
 end

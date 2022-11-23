@@ -2,7 +2,6 @@ using Test
 using MSSTA
 using ITensors
 
-
 # A brute-force implementation of _qft (only for tests)
 function _qft_ref(sites; cutoff::Float64=1e-14, sign::Int=1)
     abs(sign) == 1 || error("sign must either 1 or -1")
@@ -12,29 +11,29 @@ function _qft_ref(sites; cutoff::Float64=1e-14, sign::Int=1)
     sites = noprime(sites)
 
     tmat = zeros(ComplexF64, N, N)
-    for t in 0:N-1, x in 0:N-1
-        tmat[t+1, x+1] = exp(sign * im * 2π * t * x/N)
+    for t in 0:(N - 1), x in 0:(N - 1)
+        tmat[t + 1, x + 1] = exp(sign * im * 2π * t * x / N)
     end
 
     # `tmat`: (y_1, ..., y_N, x_1, ..., x_N)
     tmat ./= sqrt(N)
-    tmat = reshape(tmat, ntuple(x->2, 2*nbit))
+    tmat = reshape(tmat, ntuple(x -> 2, 2 * nbit))
 
     trans_t = ITensor(tmat, reverse(sites)..., prime(sites)...)
     M = MPO(trans_t, sites; cutoff=cutoff)
     return M
 end
 
-
 @testset "fouriertransform.jl" begin
     @testset "qft_mpo" for sign in [1, -1], nbit in [1, 2, 3]
         N = 2^nbit
-        
+
         sites = siteinds("Qubit", nbit)
         M = MSSTA._qft(sites; sign=sign)
         M_ref = _qft_ref(sites; sign=sign)
 
-        @test Array(reduce(*, M), vcat(sites, sites')) ≈  Array(reduce(*, M_ref), vcat(sites, sites'))
+        @test Array(reduce(*, M), vcat(sites, sites')) ≈
+              Array(reduce(*, M_ref), vcat(sites, sites'))
     end
 
     function _ft_1d_ref(X, sign)
@@ -42,7 +41,7 @@ end
         Y = zeros(ComplexF64, N)
         for k in 1:N
             for x in 1:N
-                Y[k] += exp(sign * im * 2π * (k-1) * (x-1)/N) * X[x]
+                Y[k] += exp(sign * im * 2π * (k - 1) * (x - 1) / N) * X[x]
             end
         end
         Y ./= sqrt(N)
@@ -51,20 +50,20 @@ end
 
     @testset "fouriertransform_1d" for sign in [1, -1], nbit in [2, 3, 4]
         N = 2^nbit
-        
+
         sitesx = [Index(2, "Qubit,x=$x") for x in 1:nbit]
         sitesk = [Index(2, "Qubit,k=$k") for k in 1:nbit]
 
         # X(x)
         X = randomMPS(sitesx)
         X_vec = Array(reduce(*, X), reverse(sitesx))
-    
+
         # Y(k)
         Y = MSSTA.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk)
 
         Y_vec_ref = _ft_1d_ref(X_vec, sign)
         Y_vec = vec(Array(reduce(*, Y), reverse(sitesk)))
-    
+
         @test Y_vec ≈ Y_vec_ref
     end
 
@@ -73,9 +72,8 @@ end
         G = zeros(ComplexF64, N, N)
         for ky in 1:N, kx in 1:N
             for y in 1:N, x in 1:N
-                G[kx, ky] +=
-                    exp(sign * im * 2π * (kx-1) * (x-1)/N) *
-                    exp(sign * im * 2π * (ky-1) * (y-1)/N) * F[x, y]
+                G[kx, ky] += exp(sign * im * 2π * (kx - 1) * (x - 1) / N) *
+                             exp(sign * im * 2π * (ky - 1) * (y - 1) / N) * F[x, y]
             end
         end
         G ./= N
@@ -84,19 +82,19 @@ end
 
     @testset "fouriertransform_2d" for sign in [1, -1], nbit in [2, 3]
         N = 2^nbit
-        
+
         sitesx = [Index(2, "Qubit,x=$x") for x in 1:nbit]
         sitesy = [Index(2, "Qubit,y=$y") for y in 1:nbit]
         siteskx = [Index(2, "Qubit,kx=$kx") for kx in 1:nbit]
         sitesky = [Index(2, "Qubit,ky=$ky") for ky in 1:nbit]
 
-        sitesin  = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        sitesin = collect(Iterators.flatten(zip(sitesx, sitesy)))
 
         # F(x, y)
         # F(x_1, y_1, ..., x_R, y_R)
         F = randomMPS(sitesin)
         F_mat = reshape(Array(reduce(*, F), vcat(reverse(sitesx), reverse(sitesy))), N, N)
-    
+
         # G(kx, ky)
         # G(kx_R, ky_R, ..., kx_1, ky_1)
         G_ = MSSTA.fouriertransform(F; sign=sign, tag="x", sitesdst=siteskx)
@@ -104,8 +102,7 @@ end
 
         G_mat_ref = _ft_2d_ref(F_mat, sign)
         G_mat = reshape(Array(reduce(*, G), vcat(reverse(siteskx), reverse(sitesky))), N, N)
-    
+
         @test G_mat ≈ G_mat_ref
     end
-
 end

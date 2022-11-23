@@ -25,7 +25,6 @@ function addedges(M::Union{MPS,MPO})
     return T(tensors, siteinds_org, links)
 end
 
-
 # MPO with edges
 mutable struct MPOEdge <: AbstractMPSEdge
     data::Vector{ITensor}

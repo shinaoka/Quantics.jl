@@ -31,8 +31,6 @@ function _qft(sites; cutoff::Float64=1e-14, sign::Int=1)
     return M
 end
 
-
-
 function _assign!(M::MPO, n::Int, arr; autoreshape=false)
     if autoreshape
         arr = reshape(arr, map(dim, inds(M[n]))...)
@@ -41,14 +39,13 @@ function _assign!(M::MPO, n::Int, arr; autoreshape=false)
     return nothing
 end
 
-
 """
 For length(sites) == 1
 The resultant MPO is NOT renormalized.
 """
 function _qft_nsite1_wo_norm(sites; sign::Int=1)
     length(sites) == 1 || error("num sites > 1")
-    _exp(x, k) = exp(sign * im * π * (x-1) * (k-1))
+    _exp(x, k) = exp(sign * im * π * (x - 1) * (k - 1))
 
     arr = zeros(ComplexF64, 2, 2)
     for out in 1:2, in in 1:2
@@ -60,7 +57,6 @@ function _qft_nsite1_wo_norm(sites; sign::Int=1)
 
     return M
 end
-
 
 function _qft_wo_norm(sites; cutoff::Float64=1e-14, sign::Int=1)
     N = length(sites)
@@ -77,43 +73,42 @@ function _qft_wo_norm(sites; cutoff::Float64=1e-14, sign::Int=1)
     return M
 end
 
-
 function _qft_toplayer(sites; sign::Int=1)
     N = length(sites)
     N > 1 || error("N must be greater than 1")
-    
+
     tensors = []
 
     # site = 1
     arr = zeros(ComplexF64, 2, 2, 2)
     for x in 1:2, k in 1:2
         # arr: (out, in, link)
-        arr[x,k,k] = exp(sign * im * π * (x-1) * (k-1))
+        arr[x, k, k] = exp(sign * im * π * (x - 1) * (k - 1))
     end
     push!(tensors, arr)
 
     for n in 2:N
-        ϕ = π * 0.5^(n-1)
-        _exp(x, k) = exp(sign * im * ϕ * (x-1) * (k-1))
+        ϕ = π * 0.5^(n - 1)
+        _exp(x, k) = exp(sign * im * ϕ * (x - 1) * (k - 1))
         # Right most tensor
         if n == N
             # arr: (link, out, in)
             arr = zeros(ComplexF64, 2, 2, 2)
             for x in 1:2, k in 1:2
-                arr[k,x,x] = _exp(x, k)
+                arr[k, x, x] = _exp(x, k)
             end
             push!(tensors, arr)
         else
             # arr: (link_left, out, in, link_right)
             arr = zeros(ComplexF64, 2, 2, 2, 2)
             for x in 1:2, k in 1:2
-                arr[k,x,x,k] = _exp(x, k)
+                arr[k, x, x, k] = _exp(x, k)
             end
             push!(tensors, arr)
         end
     end
 
-    M = MSSTA._zero_mpo(sites; linkdims=fill(2, N-1))
+    M = MSSTA._zero_mpo(sites; linkdims=fill(2, N - 1))
     for n in 1:N
         _assign!(M, n, tensors[n])
     end
@@ -121,23 +116,92 @@ function _qft_toplayer(sites; sign::Int=1)
     return M
 end
 
-
 function _contract(M_top, M_prev)
     length(M_top) == length(M_prev) + 1 || error("Length mismatch")
     N = length(M_top)
-    M_top = ITensors.replaceprime(M_top, 1=>2; tags="Qubit")
-    M_top = ITensors.replaceprime(M_top, 0=>1; tags="Qubit")
+    M_top = ITensors.replaceprime(M_top, 1 => 2; tags="Qubit")
+    M_top = ITensors.replaceprime(M_top, 0 => 1; tags="Qubit")
     M_top_ = ITensors.data(M_top)
     M_prev_ = ITensors.data(M_prev)
 
     M_data = [M_top_[1]]
-    for n in 1:(N-1)
-        push!(M_data, M_top_[n+1] * M_prev_[n])
+    for n in 1:(N - 1)
+        push!(M_data, M_top_[n + 1] * M_prev_[n])
     end
 
-    M =  MPO(M_data)
-    M =  ITensors.replaceprime(M, 1=>0; tags="Qubit")
-    M =  ITensors.replaceprime(M, 2=>1; tags="Qubit")
+    M = MPO(M_data)
+    M = ITensors.replaceprime(M, 1 => 0; tags="Qubit")
+    M = ITensors.replaceprime(M, 2 => 1; tags="Qubit")
 
     return M
+end
+
+abstract type AbstractFT end
+
+struct FTCore
+    forward::MPO
+
+    function FTCore(sites; kwargs...)
+        new(_qft(sites; kwargs...))
+    end
+end
+
+nbit(ft::AbstractFT) = length(ft.ftcore.forward)
+
+"""
+sites[1] corresponds to the most significant digit.
+sign = 1
+"""
+function forwardmpo(ftcore::FTCore, sites)
+    M = copy(ftcore.forward)
+    replace_mpo_siteinds!(M, extractsites(M), sites)
+    return M
+end
+
+function backwardmpo(ftcore::FTCore, sites)
+    M = conj(MPO(reverse([x for x in ftcore.forward])))
+    replace_mpo_siteinds!(M, extractsites(M), sites)
+    return M
+end
+
+@doc raw"""
+sitesrc[1] / sitesrc[end] corresponds to the most/least significant digit of the input.
+sitesdst[1] / sitesdst[end] corresponds to the most/least significant digit of the output.
+"""
+function fouriertransform(M::MPS;
+                          sign::Int=1,
+                          tag::String="",
+                          sitessrc=nothing,
+                          sitesdst=nothing,
+                          cutoff_MPO=1e-25, kwargs...)
+    if tag == "" && sitessrc === nothing
+        error("tag or sitesrc must be specified")
+    elseif tag != "" && sitessrc !== nothing
+        error("tag and sitesrc are exclusive")
+    end
+
+    # Set input site indices
+    if tag != ""
+        sites = siteinds(M)
+        sitepos = findallsites_by_tag(sites; tag=tag)
+        target_sites = [sites[p] for p in sitepos]
+    elseif sitesrc !== nothing
+        target_sites = sitesrc
+        sitepos = [findsite(M, s) for s in target_sites]
+    end
+
+    if sitesdst === nothing
+        sitesdst = target_sites
+    end
+
+    MQ_ = _qft(target_sites; sign=sign, cutoff=cutoff_MPO)
+    MQ = matchsiteinds(MQ_, sites)
+    M_result = apply(MQ, M; kwargs...)
+
+    N = length(target_sites)
+    for n in eachindex(target_sites)
+        replaceind!(M_result[sitepos[n]], target_sites[n], sitesdst[N - n + 1])
+    end
+
+    return M_result
 end
