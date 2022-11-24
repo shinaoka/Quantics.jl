@@ -153,24 +153,30 @@ end
     end
 
     @testset "_preprocess_matmul" begin
-        nrepeat = 3
-        N = 3 * nrepeat
-        sites = siteinds("Qubit", N)
-        M = randomMPS(sites)
-        tensors = ITensors.data(M)
-        sites1 = sites[1:3:end]
-        sites2 = sites[2:3:end]
-        sites3 = sites[3:3:end]
-        MSSTA._preprocess_matmul!(tensors, sites1, sites2)
+        N = 2
+        sitesx = [Index(2, "x=$n") for n in 1:N]
+        sitesy = [Index(2, "y=$n") for n in 1:N]
+        sitesz = [Index(2, "z=$n") for n in 1:N]
+        sites1 = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        sites2 = collect(Iterators.flatten(zip(sitesy, sitesz)))
+        M1 = MSSTA._convert_to_MPO(randomMPS(sites1))
+        M2 = MSSTA._convert_to_MPO(randomMPS(sites2))
+
+        muls = [MSSTA.MatrixMultiplier(sx, sy, sz) for (sx, sy, sz) in zip(sitesx, sitesy, sitesz)]
+
+        for mul in muls
+            M1, M2 = MSSTA.preprocess(mul, M1, M2)
+        end
+
         flag = true
-        for n in 1:nrepeat
-            flag = flag && hasind(tensors[2 * n - 1], sites1[n])
-            flag = flag && hasind(tensors[2 * n - 1], sites2[n])
-            flag = flag && hasind(tensors[2 * n], sites3[n])
+        for n in 1:N
+            flag = flag && hasinds(M1[n], sitesx[n], sitesy[n])
+            flag = flag && hasinds(M2[n], sitesy[n], sitesz[n])
         end
         @test flag
     end
 
+    #==
     @testset "_preprocess_matmul2" begin
         N = 2
         sitesx = [Index(2, "x=$n") for n in 1:N]
@@ -191,24 +197,29 @@ end
         end
         @test flag
     end
+    ==#
 
-    @testset "_postprocess_matmul" begin
+    @testset "postprocess_matmul" begin
         N = 2
         sitesx = [Index(2, "x=$n") for n in 1:N]
         sitesy = [Index(2, "y=$n") for n in 1:N]
+        sitesz = [Index(2, "z=$n") for n in 1:N]
+        muls = [MSSTA.MatrixMultiplier(sx, sy, sz) for (sx, sy, sz) in zip(sitesx, sitesy, sitesz)]
 
         links = [Index(1, "Link,l=$l") for l in 0:N]
         M = MPO(N)
         for n in 1:N
-            M[n] = randomITensor(links[n], links[n+1], sitesx[n], sitesy[n])
+            M[n] = randomITensor(links[n], links[n+1], sitesx[n], sitesz[n])
         end
 
-        M_split = MSSTA._postprocess_matmul(M, sitesx, sitesy)
+        for mul in muls
+           M = MSSTA.postprocess(mul, M)
+        end
 
         flag = true
         for n in 1:N
-            flag = flag && hasind(M_split[2*n-1], sitesx[n])
-            flag = flag && hasind(M_split[2*n], sitesy[n])
+            flag = flag && hasind(M[2*n-1], sitesx[n])
+            flag = flag && hasind(M[2*n], sitesz[n])
         end
         @test flag
 

@@ -117,4 +117,26 @@ using ITensors
         @test MSSTA.findallsites_by_tag(sites; tag="k") == [3, 1]
         @test MSSTA.findallsiteinds_by_tag(sites; tag="k") == [sites[3], sites[1]]
     end
+
+    @testset "combinsite" begin
+        nrepeat = 3
+        N = 3 * nrepeat
+        sites = siteinds("Qubit", N)
+        M = MPO(randomMPS(sites))
+        sites1 = sites[1:3:end]
+        sites2 = sites[2:3:end]
+        sites3 = sites[3:3:end]
+        for n in 1:nrepeat
+            M = MSSTA.combinesites(M, sites1[n], sites2[n])
+        end
+        flag = true
+        for n in 1:nrepeat
+            flag = flag && hasinds(M[2 * n - 1], sites1[n], sites2[n])
+            flag = flag && hasind(M[2 * n], sites3[n])
+        end
+        @test flag
+    end
 end
+
+
+nothing

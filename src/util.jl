@@ -384,3 +384,26 @@ function _convert_to_MPO(tensors::Vector{ITensor})
     end
     return M
 end
+
+function _convert_to_MPO(M::MPS)
+    return _convert_to_MPO(ITensors.data(M))
+end
+
+
+"""
+Contract two adjacent tensors in MPO
+"""
+function combinesites(M::MPO, site1::Index, site2::Index)
+    p1 = findsite(M, site1)
+    p2 = findsite(M, site2)
+    p1 === nothing && error("Not found $site1")
+    p2 === nothing && error("Not found $site2")
+    abs(p1 - p2) == 1 ||
+        error("$site1 and $site2 are found at indices $p1 and $p2. They must be on two adjacent sites.")
+    tensors = ITensors.data(M)
+    idx = min(p1, p2)
+    tensor = tensors[idx] * tensors[idx + 1]
+    deleteat!(tensors, idx:(idx + 1))
+    insert!(tensors, idx, tensor)
+    return MPO(tensors)
+end
