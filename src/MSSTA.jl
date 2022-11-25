@@ -2,7 +2,7 @@ module MSSTA
 
 using ITensors
 import ITensors
-import ITensors.NDTensors: Tensor
+import ITensors.NDTensors: Tensor, BlockSparseTensor, blockview
 import SparseIR: Fermionic, Bosonic
 import LinearAlgebra: I
 
