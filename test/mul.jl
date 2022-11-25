@@ -3,6 +3,17 @@ import MSSTA
 using ITensors
 using ITensorTDVP
 
+"""
+Reconstruct 3D matrix
+"""
+function _tomat3(a)
+    sites = siteinds(a)
+    N = length(sites)
+    Nreduced = N ÷ 3
+    sites_ = [sites[1:3:N]..., sites[2:3:N]..., sites[3:3:N]...]
+    return reshape(Array(reduce(*, a), sites_), 2^Nreduced, 2^Nreduced, 2^Nreduced)
+end
+
 @testset "mul.jl" begin
     @testset "_preprocess_matmul" begin
         N = 2
@@ -83,7 +94,7 @@ using ITensorTDVP
         @test M_mat_ref ≈ M_mat_reconst
     end
 
-    @testset "elementwise" begin
+    @testset "elementwisemul" begin
         N = 5
         sites = [Index(2, "n=$n") for n in 1:N]
         mul = MSSTA.ElementwiseMultiplier(sites)
@@ -108,6 +119,36 @@ using ITensorTDVP
         M2_reconst = Array(reduce(*, M2_), sites)
 
         @test M_reconst ≈ M1_reconst .* M2_reconst
+    end
+
+    @testset "batchedmatmul" begin
+        """
+        C(x, z, k) = sum_y A(x, y, k) * B(y, z, k)
+        """
+        nbit = 2
+        D = 2
+        sx = [Index(2, "Qubit,x=$n") for n in 1:nbit]
+        sy = [Index(2, "Qubit,y=$n") for n in 1:nbit]
+        sz = [Index(2, "Qubit,z=$n") for n in 1:nbit]
+        sk = [Index(2, "Qubit,k=$n") for n in 1:nbit]
+
+        sites_a = collect(Iterators.flatten(zip(sx, sy, sk)))
+        sites_b = collect(Iterators.flatten(zip(sy, sz, sk)))
+
+        a = randomMPS(sites_a; linkdims=D)
+        b = randomMPS(sites_b; linkdims=D)
+
+        # Reference data
+        a_arr = _tomat3(a)
+        b_arr = _tomat3(b)
+        ab_arr = zeros(Float64, 2^nbit, 2^nbit, 2^nbit)
+        for k in 1:(2^nbit)
+            ab_arr[:, :, k] .= a_arr[:, :, k] * b_arr[:, :, k]
+        end
+
+        ab = MSSTA.automul(a, b; tag_row="x", tag_shared="y", tag_col="z", alg="naive")
+        ab_arr_reconst = _tomat3(ab)
+        @test ab_arr ≈ ab_arr_reconst
     end
 end
 

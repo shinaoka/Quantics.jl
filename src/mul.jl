@@ -127,7 +127,10 @@ function preprocess(mul::ElementwiseMultiplier{T}, M1::MPO, M2::MPO) where {T}
     for s in mul.sites
         p = findfirst(hasind(s), tensors1)
         hasinds(tensors2[p], s) || error("ITensor of M2 at $p does not have $s")
-        tensors1[p] = replaceprime(_asdiagonal(tensors1[p], s), 0 => 1, 1 => 2)
+        #tensors1[p] = replaceprime(_asdiagonal(tensors1[p], s), 0 => 1, 1 => 2)
+        tensors1[p] = _asdiagonal(tensors1[p], s)
+        replaceind!(tensors1[p], s' => s'')
+        replaceind!(tensors1[p], s => s')
         tensors2[p] = _asdiagonal(tensors2[p], s)
     end
     return MPO(tensors1), MPO(tensors2)
@@ -140,4 +143,34 @@ function postprocess(mul::ElementwiseMultiplier{T}, M::MPO)::MPO where {T}
         tensors[p] = _todense(tensors[p], s)
     end
     return MPO(tensors)
+end
+
+"""
+By default, elementwise multiplication will be performed.
+"""
+function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
+                 tag_col::String="", kwargs...)
+    sites_row = findallsiteinds_by_tag(siteinds(M1); tag=tag_row)
+    sites_shared = findallsiteinds_by_tag(siteinds(M1); tag=tag_shared)
+    sites_col = findallsiteinds_by_tag(siteinds(M2); tag=tag_col)
+    sites_matmul = Set(Iterators.flatten([sites_row, sites_shared, sites_col]))
+
+    if sites_shared != findallsiteinds_by_tag(siteinds(M2); tag=tag_shared)
+        error("Invalid shared sites for MatrixMultiplier")
+    end
+
+    matmul = MatrixMultiplier(sites_row, sites_shared, sites_col)
+    ewmul = ElementwiseMultiplier([s for s in siteinds(M1) if s ∉ sites_matmul])
+
+    M1_ = MSSTA.asMPO(M1)
+    M2_ = MSSTA.asMPO(M2)
+    M1_, M2_ = preprocess(matmul, M1_, M2_)
+    M1_, M2_ = preprocess(ewmul, M1_, M2_)
+
+    M = MSSTA.asMPO(contract(M1_, M2_; kwargs...))
+
+    M = MSSTA.postprocess(matmul, M)
+    M = MSSTA.postprocess(ewmul, M)
+
+    return asMPS(M)
 end

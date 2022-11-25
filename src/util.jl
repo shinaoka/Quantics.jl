@@ -375,7 +375,9 @@ function findallsiteinds_by_tag(sites; tag::String="τ", maxnsites::Int=1000)
     return [sites[p] for p in positions]
 end
 
-function _convert_to_MPO(tensors::Vector{ITensor})
+asMPO(M::MPO) = M
+
+function asMPO(tensors::Vector{ITensor})
     N = length(tensors)
     M = MPO(N)
     for n in 1:N
@@ -384,11 +386,13 @@ function _convert_to_MPO(tensors::Vector{ITensor})
     return M
 end
 
-function _convert_to_MPO(M::MPS)
-    return _convert_to_MPO(ITensors.data(M))
+function asMPO(M::MPS)
+    return asMPO(ITensors.data(M))
 end
 
-const asMPO = _convert_to_MPO
+function asMPS(M::MPO)
+    return MPS([t for t in M])
+end
 
 """
 Contract two adjacent tensors in MPO
