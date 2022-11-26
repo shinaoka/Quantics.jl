@@ -15,5 +15,6 @@ include("mpo.jl")
 include("fouriertransform.jl")
 include("imaginarytime.jl")
 include("matmul.jl")
+include("transformer.jl")
 
 end

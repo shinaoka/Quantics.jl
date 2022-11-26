@@ -2,32 +2,7 @@ using Test
 using ITensors
 using MSSTA
 
-@testset "arithmetic.jl" begin
-#=
-@testset "_adder" begin
-    link_in = Index(2, "link_in")
-    link_out = Index(2, "link_out")
-    site_a = Index(2, "site_a")
-    site_b = Index(2, "site_b")
-    site_out = Index(2, "site_out")
-    adder = MSSTA._adder_single_tensor(link_in, link_out, site_a, site_b, site_out)
-    @test size(adder) == (2, 2, 2, 2, 2)
-    for (cin, a, b, out, cout) in [
-            (0, 0, 0, 0, 0),
-            (0, 0, 1, 1, 0),
-            (0, 1, 0, 1, 0),
-            (0, 1, 1, 0, 1),
-            (1, 0, 0, 1, 0),
-            (1, 0, 1, 0, 1),
-            (1, 1, 0, 0, 1),
-            (1, 1, 1, 1, 1),
-        ]
-        @test adder[cin + 1, cout+1, a+1, b+1, out+1] == 1.0
-    end
-end
-=#
-
-@testset "_binaryop" for rev_carrydirec in [true, false]
+@testset "arithmetic.jl" begin @testset "_binaryop" for rev_carrydirec in [true, false]
     # x' = a * x + b * y
     # y' = c * x + d * y
     # f(x, y) = g(x', y')

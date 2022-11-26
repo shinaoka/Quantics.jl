@@ -25,9 +25,19 @@ function replace_mpo_siteinds!(M::MPO, sites_src, sites_dst)
 end
 
 """
-Reverse the order of the physical indices of a MPO
+Reverse the order of the physical indices of an MPS/MPO
 """
-#revserMPO(reverse([x for x in M]))
+#function _reverse(M::MPS) = typeof(M)([M[n] for n in reverse(1:length(M))])
+function _reverse(M::MPO)
+    sites = extractsites(M)
+    N = length(M)
+    M_ = MPO([M[n] for n in reverse(1:length(M))])
+    for n in 1:N
+        replaceind!(M_[n], sites[N - n + 1], sites[n])
+        replaceind!(M_[n], sites[N - n + 1]', sites[n]')
+    end
+    return M_
+end
 
 """
 Create a MPO with ITensor objects of ElType ComplexF64 filled with zero
@@ -300,7 +310,7 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     sites = noprime.(sites)
     positions = Int[findfirst(sites, s) for s in siteinds(M)]
     if length(M) > 1 && issorted(positions; lt=Base.isgreater)
-        return matchsiteinds(reverse(M), sites)
+        return matchsiteinds(_reverse(M), sites)
     end
 
     MSSTA.isascendingorder(positions) ||
@@ -344,20 +354,17 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     return MPO(tensors)
 end
 
-function findsites_by_tag(sites::Index; tag::String="τ",
-                          nbit::Int=length(sites))::Vector{Int}
-    result = Vector{Int}(undef, nbit)
-    for n in 1:nbit
-        tag_ = tag * "=$n"
-        result[n] = findfirst(hastags(tag_), sites)
-        if result[n] === nothing
-            error("Not found $tag_")
-        end
-    end
-    return result
-end
+"""
+Find sites with the given tag
 
-function findallsites_by_tag(sites; tag::String="τ", maxnsites::Int=1000)::Vector{Int}
+For tag = `x`, if `sites` contains an Index object with `x`, the function returns a vector containing only its positon.
+
+If not, the function seach for all Index objects with tags `x=1`, `x=2`, ..., and return their positions.
+
+If no Index object is found, an empty vector will be returned.
+"""
+function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="τ",
+                             maxnsites::Int=1000)::Vector{Int} where {T}
     result = Int[]
     for n in 1:maxnsites
         tag_ = tag * "=$n"

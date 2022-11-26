@@ -9,4 +9,5 @@ using MSSTA
     include("mul.jl")
     include("matmul.jl")
     include("mps.jl")
+    include("transformer.jl")
 end
