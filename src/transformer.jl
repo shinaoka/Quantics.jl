@@ -41,3 +41,15 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
 
     return M
 end
+
+function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...) where {T}
+    sites = siteinds(M)
+    targetsites = sites
+    if tag != ""
+        targetsites = findallsiteinds_by_tag(sites; tag=tag)
+    end
+
+    transformer = matchsiteinds(flipop(targetsites; rev_carrydirec=true, bc=bc), sites)
+
+    return apply(transformer, M; kwargs...)
+end

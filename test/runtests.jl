@@ -7,7 +7,6 @@ using MSSTA
     include("fouriertransform.jl")
     include("imaginarytime.jl")
     include("mul.jl")
-    include("matmul.jl")
     include("mps.jl")
     include("transformer.jl")
 end
