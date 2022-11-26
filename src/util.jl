@@ -354,6 +354,18 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     return MPO(tensors)
 end
 
+#==
+function _findtag(tag, sites::Vector{Index{T}}; only=true) where {T}
+    idx = findall(hastags(tag), sites)
+    if length(idx) == 0
+        error("Not siteind with tag $tag found")
+    elseif length(idx) > 1
+        error("More than one siteind with tag $tag found")
+    end
+    return idx[1]
+end
+==#
+
 """
 Find sites with the given tag
 
@@ -363,21 +375,23 @@ If not, the function seach for all Index objects with tags `x=1`, `x=2`, ..., an
 
 If no Index object is found, an empty vector will be returned.
 """
-function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="τ",
+function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="x",
                              maxnsites::Int=1000)::Vector{Int} where {T}
     result = Int[]
     for n in 1:maxnsites
         tag_ = tag * "=$n"
-        idx = findfirst(hastags(tag_), sites)
-        if idx === nothing
+        idx = findall(hastags(tag_), sites)
+        if length(idx) == 0
             break
+        elseif length(idx) > 1
+            error("More siteinds with $(tag_) than one found")
         end
-        push!(result, idx)
+        push!(result, idx[1])
     end
     return result
 end
 
-function findallsiteinds_by_tag(sites; tag::String="τ", maxnsites::Int=1000)
+function findallsiteinds_by_tag(sites; tag::String="x", maxnsites::Int=1000)
     positions = findallsites_by_tag(sites; tag=tag, maxnsites=maxnsites)
     return [sites[p] for p in positions]
 end
