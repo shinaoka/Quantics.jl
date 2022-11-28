@@ -42,7 +42,7 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     return M
 end
 
-function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...) where {T}
+function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
     sites = siteinds(M)
     targetsites = sites
     if tag != ""
