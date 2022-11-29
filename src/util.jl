@@ -282,6 +282,12 @@ function tobin!(x::Int, xbin::Vector{Int})
     end
 end
 
+function tobin(x::Int, R::Int)
+    bin = zeros(Int, R)
+    tobin!(x, bin)
+    return bin
+end
+
 # Get bit at pos (>=0). pos=0 is the least significant digit.
 _getbit(i, pos) = ((i & (1 << pos)) >> pos)
 

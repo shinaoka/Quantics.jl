@@ -55,14 +55,7 @@ end
         # w_Q, ..., w_1
         giv = vec(Array(reduce(*, giv_mps), sites...))
 
-        #open("test.txt", "w") do file
-        #for i in 1:nτ
-        #println(file, i, " ", real(giv[i]), " ", imag(giv[i]), " ", real(giv_smpl[i]), " ", imag(giv_smpl[i]))
-        #end
-        #end
-
         @test maximum(abs, giv - giv_smpl) < 2e-2
-        #@test false
     end
 
     @testset "ImaginaryTimeFT.to_tau" begin
@@ -81,19 +74,11 @@ end
         gtau_mps = MSSTA.to_tau(Fermionic(), ft, giv_mps, β; cutoff=1e-20)
 
         # tau_Q, ..., tau_1
-        #println("1 ", inds(t))
         gtau = vec(Array(reduce(*, gtau_mps), reverse(sites)...))
-
-        #open("test.txt", "w") do file
-        #for i in 1:nτ
-        #println(file, i, " ", real(gtau[i]), " ", imag(gtau[i]), " ", real(gtau_smpl[i]), " ", imag(gtau_smpl[i]))
-        #end
-        #end
 
         # There is ocillation around tau = 0, beta.
         @test maximum(abs, (gtau - gtau_smpl)[trunc(Int, 0.2 * nτ):trunc(Int, 0.8 * nτ)]) <
               1e-2
-        #@test false
     end
 
     @testset "poletomps" begin

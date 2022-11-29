@@ -20,6 +20,9 @@ We denote the input and output MPS's by ``X`` and ``Y``, respectively.
 
 """
 function _qft(sites; cutoff::Float64=1e-14, sign::Int=1)
+    if any([!hastags(inds(s), "Qubit") for s in sites])
+        error("All siteinds for qft must has Qubit tag")
+    end
     M = _qft_wo_norm(sites; cutoff=cutoff, sign=sign)
     M *= 2.0^(-0.5 * length(sites))
 
@@ -192,6 +195,10 @@ function fouriertransform(M::MPS;
 
     if sitesdst === nothing
         sitesdst = target_sites
+    end
+
+    if length(target_sites) <= 1
+        error("Invalid target_sites")
     end
 
     MQ_ = _qft(target_sites; sign=sign, cutoff=cutoff_MPO)
