@@ -438,3 +438,18 @@ function combinesites(M::MPO, site1::Index, site2::Index)
     insert!(tensors, idx, tensor)
     return MPO(tensors)
 end
+
+function directprod(::Type{T}, sites, indices) where {T}
+    length(sites) == length(indices) || error("Length mismatch between sites and indices")
+    any(0 .== indices) && error("indices must be 1-based")
+    R = length(sites)
+
+    links = [Index(1, "Link,l=$l") for l in 0:R]
+    tensors = ITensor[]
+    for n in 1:R
+        push!(tensors, onehot(links[n] => 1, links[n + 1] => 1, sites[n] => indices[n]))
+    end
+    tensors[1] *= onehot(links[1] => 1)
+    tensors[end] *= onehot(links[end] => 1)
+    return MPS(tensors)
+end

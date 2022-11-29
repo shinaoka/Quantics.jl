@@ -59,7 +59,4 @@ using MSSTA
 
         @test g_vec_ref ≈ g_vec
     end
-
-end
-
-end
+end end
