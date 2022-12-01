@@ -208,7 +208,7 @@ where ``s = \pm 1``, ``x_0`` and ``y_0`` are constants, ``N=2^R``.
 
 `siteinds(M)` must contain `sitessrc` in ascending or descending order.
 Instead of specifying `sitessrc`, one can specify the source sites by setting `tag`.
-If `tag` = `x`, all sites with tags `x=1`, `x=2` are used as `sitessrc`.
+If `tag` = `x`, all sites with tags `x=1`, `x=2`, ... are used as `sitessrc`.
 """
 function fouriertransform(M::MPS;
                           sign::Int=1,
