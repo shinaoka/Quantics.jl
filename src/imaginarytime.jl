@@ -10,30 +10,71 @@ struct ImaginaryTimeFT <: AbstractFT
     end
 end
 
-#function to_wn(::Fermionic, gtau::MPS, beta::Float64, tag::String="τ"; nbit=length(gtau), kwargs...)
-#sites = 
-#end
 
-function to_wn(::Fermionic, ft::ImaginaryTimeFT, gtau::MPS, beta::Float64; kwargs...)
-    length(gtau) == nbit(ft) || error("Length mismatch")
-    nbit_ = length(gtau)
-    gtau = noprime(copy(gtau))
+_θ_stat(::Fermionic, N) = π * ((-N + 1) / N)
+_θ_stat(::Bosonic, N) = - π
 
-    N = 2^nbit_
-    sites = siteinds(gtau)
+_stat_shift(::Fermionic) = 1
+_stat_shift(::Bosonic) = 0
 
-    # Apply phase shift to each Qubit
-    θ = π * ((-N + 1) / N)
-    for i in 1:nbit_
-        gtau[i] = noprime(gtau[i] * op("Phase", sites[i]; ϕ=θ * 2^(nbit_ - i)))
+"""
+Site indices of the input is assumed to be τ=1, τ=2, ... from the left.
+"""
+function _to_wn_MPO(stat::Statistics, beta::Float64, nqbit; cutoff=1e-25)
+    sites = siteinds("Qubit", nqbit)
+    N = 2^nqbit
+    M = (beta * 2^(-nqbit / 2)) * MSSTA._qft(sites; cutoff=cutoff)
+    M = replaceprime(M, 0=>1, 1=>2)
+
+    θ = _θ_stat(stat, N)
+    for n in 1:nqbit
+        M[n] *= op("Phase", sites[n]; ϕ=θ * 2^(nqbit - n))
     end
 
-    # FFT
-    M = forwardmpo(ft.ftcore, sites)
-    giv = ITensors.apply(M, gtau; kwargs...)
-    giv *= beta * 2^(-nbit_ / 2)
+    M = replaceprime(M, 1=>0, 2=>1)
+    MSSTA.cleanup_linkinds!(M)
 
+    return M
+end
+
+"""
+Site indices of the input is assumed to be ν=1, ν=2, ... from the left.
+"""
+function _to_tau_MPO(stat::Statistics, beta::Float64, nqbit; cutoff=1e-25)
+    sites = siteinds("Qubit", nqbit)
+    N = 2^nqbit
+    M = ((2^(nqbit / 2)) / beta) * MSSTA._qft(sites; sign=-1, cutoff=cutoff)
+
+    θ = -_θ_stat(stat, N)
+    for n in 1:nqbit
+        M[n] *= replaceprime(op("Phase", sites[n]; ϕ=θ * 2^(nqbit - n)), 0=>1, 1=>2)
+    end
+
+    #M = replaceprime(M, 2=>1)
+    for n in eachindex(M)
+        replaceind!(M[n], sites[n]'', sites[n]')
+    end
+    MSSTA.cleanup_linkinds!(M)
+    return M
+end
+
+
+function to_wn(stat::Statistics, gtau::MPS, beta::Float64; sitessrc=nothing, tag="", sitesdst=nothing, kwargs...)::MPS
+    sitepos, _ = _find_target_sites(gtau; sitessrc=sitessrc, tag=tag)
+    nqbit_t = length(sitepos)
+    originwn = 0.5*(-2.0^nqbit_t + _stat_shift(stat))
+    giv = fouriertransform(gtau; tag=tag, sitessrc=sitessrc, sitesdst=sitesdst, origindst=originwn)
+    giv *= (beta * 2^(-nqbit_t / 2))
     return giv
+end
+
+function to_tau(stat::Statistics, giv::MPS, beta::Float64; sitessrc=nothing, tag="", sitesdst=nothing, kwargs...)::MPS
+    sitepos, _ = _find_target_sites(giv; sitessrc=sitessrc, tag=tag)
+    nqbit_t = length(sitepos)
+    originwn = 0.5*(-2.0^nqbit_t + _stat_shift(stat))
+    gtau = fouriertransform(giv; sign=-1, tag=tag, sitessrc=sitessrc, sitesdst=sitesdst, originsrc=originwn)
+    gtau *= ((2^(nqbit_t / 2)) / beta) 
+    return gtau
 end
 
 function to_tau(::Fermionic, ft::ImaginaryTimeFT, giv::MPS, beta::Float64; kwargs...)
@@ -71,14 +112,18 @@ function decompose_gtau(gtau_smpl::Vector{ComplexF64}, sites; kwargs...)
     return MPS(gtau_smpl, sites; kwargs...)
 end
 
+"""
+w = (w_1 w_2, ..., w_R)_2
+In the resultant MPS, the site indices are
+   w_R, w_{R-1}, ..., w_1 from the left to the right.
+
+sites: indices for w_1, ..., w_R in this order.
+"""
 function decompose_giv(giv_smpl::Vector{ComplexF64}, sites; kwargs...)
     nbit = length(sites)
     length(giv_smpl) == 2^nbit || error("Length mismatch")
-
-    # (g_N, g_{N-1}, ...)
-    giv_smpl = reshape(giv_smpl, repeat([2], nbit)...)
-
-    return MPS(giv_smpl, sites; kwargs...)
+    tensor = ITensor(giv_smpl, reverse(sites))
+    return MPS(tensor, reverse(sites); kwargs...)
 end
 
 """

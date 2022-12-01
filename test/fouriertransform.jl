@@ -36,19 +36,19 @@ end
               Array(reduce(*, M_ref), vcat(sites, sites'))
     end
 
-    function _ft_1d_ref(X, sign)
+    function _ft_1d_ref(X, sign, originx, origink)
         N = length(X)
         Y = zeros(ComplexF64, N)
         for k in 1:N
             for x in 1:N
-                Y[k] += exp(sign * im * 2π * (k - 1) * (x - 1) / N) * X[x]
+                Y[k] += exp(sign * im * 2π * (k + origink - 1) * (x + originx - 1) / N) * X[x]
             end
         end
         Y ./= sqrt(N)
         return Y
     end
 
-    @testset "fouriertransform_1d" for sign in [1, -1], nbit in [2, 3, 4]
+    @testset "fouriertransform_1d" for sign in [1, -1], nbit in [2, 3, 4], originx in [0.1], originy in [-0.2]
         N = 2^nbit
 
         sitesx = [Index(2, "Qubit,x=$x") for x in 1:nbit]
@@ -59,9 +59,9 @@ end
         X_vec = Array(reduce(*, X), reverse(sitesx))
 
         # Y(k)
-        Y = MSSTA.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk)
+        Y = MSSTA.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk, originsrc=originx, origindst=originy)
 
-        Y_vec_ref = _ft_1d_ref(X_vec, sign)
+        Y_vec_ref = _ft_1d_ref(X_vec, sign, originx, originy)
         Y_vec = vec(Array(reduce(*, Y), reverse(sitesk)))
 
         @test Y_vec ≈ Y_vec_ref

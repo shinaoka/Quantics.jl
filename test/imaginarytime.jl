@@ -47,13 +47,12 @@ end
 
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
-        sites = [Index(2, "Qubit,τ=$t,iω=$(nbit+1-t)") for t in 1:nbit]
-        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sites; cutoff=1e-20)
-        ft = MSSTA.ImaginaryTimeFT(MSSTA.FTCore(sites))
-        giv_mps = MSSTA.to_wn(Fermionic(), ft, gtau_mps, β; cutoff=1e-20)
+        sitesτ = [Index(2, "Qubit,τ=$n") for n in 1:nbit]
+        sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
+        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sitesτ; cutoff=1e-20)
+        giv_mps = MSSTA.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ", sitesdst=sitesiω)
 
-        # w_Q, ..., w_1
-        giv = vec(Array(reduce(*, giv_mps), sites...))
+        giv = vec(Array(reduce(*, giv_mps), reverse(sitesiω)...))
 
         @test maximum(abs, giv - giv_smpl) < 2e-2
     end
@@ -66,15 +65,13 @@ end
 
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
-        sites = [Index(2, "Qubit,τ=$t,iω=$(nbit+1-t)") for t in 1:nbit]
-        giv_mps = MSSTA.decompose_giv(giv_smpl, sites; cutoff=1e-20)
+        sitesτ = [Index(2, "Qubit,τ=$n") for n in 1:nbit]
+        sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
+        giv_mps = MSSTA.decompose_giv(giv_smpl, sitesiω; cutoff=1e-20)
 
-        ftcore = MSSTA.FTCore(sites)
-        ft = MSSTA.ImaginaryTimeFT(ftcore)
-        gtau_mps = MSSTA.to_tau(Fermionic(), ft, giv_mps, β; cutoff=1e-20)
+        gtau_mps = MSSTA.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω", sitesdst=sitesτ)
 
-        # tau_Q, ..., tau_1
-        gtau = vec(Array(reduce(*, gtau_mps), reverse(sites)...))
+        gtau = vec(Array(reduce(*, gtau_mps), reverse(sitesτ)...))
 
         # There is ocillation around tau = 0, beta.
         @test maximum(abs, (gtau - gtau_smpl)[trunc(Int, 0.2 * nτ):trunc(Int, 0.8 * nτ)]) <

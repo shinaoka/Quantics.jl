@@ -316,7 +316,7 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     sites = noprime.(sites)
     positions = Int[findfirst(sites, s) for s in siteinds(M)]
     if length(M) > 1 && issorted(positions; lt=Base.isgreater)
-        return matchsiteinds(_reverse(M), sites)
+        return matchsiteinds(MPO([M[n] for n in reverse(1:length(M))]), sites)
     end
 
     MSSTA.isascendingorder(positions) ||
@@ -452,4 +452,30 @@ function directprod(::Type{T}, sites, indices) where {T}
     tensors[1] *= onehot(links[1] => 1)
     tensors[end] *= onehot(links[end] => 1)
     return MPS(tensors)
+end
+
+
+function _find_target_sites(M::MPS; sitessrc=nothing, tag="")
+    if tag == "" && sitessrc === nothing
+        error("tag or sitesrc must be specified")
+    elseif tag != "" && sitessrc !== nothing
+        error("tag and sitesrc are exclusive")
+    end
+
+    # Set input site indices
+    if tag != ""
+        sites = siteinds(M)
+        sitepos = findallsites_by_tag(sites; tag=tag)
+        target_sites = [sites[p] for p in sitepos]
+    elseif sitessrc !== nothing
+        target_sites = sitessrc
+        sitepos = Int[findsite(M, s) for s in sitessrc]
+        #@show M
+        #@show siteind(M, 1)
+        #@show sitessrc[1]
+        #@show findsite(M, siteind(M, 1))
+        #@show findsite(M, sitessrc[1])
+    end
+
+    return sitepos, target_sites
 end

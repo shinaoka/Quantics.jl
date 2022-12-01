@@ -53,3 +53,20 @@ function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
 
     return apply(transformer, M; kwargs...)
 end
+
+
+"""
+Multiply by exp(i θ x), where x = (x_1, ..., x_R)_2.
+"""
+function phase_rotation(M::MPS, θ::Float64; targetsites=nothing, tag="")
+    sitepos, target_sites = _find_target_sites(M; sitessrc=targetsites, tag=tag)
+    res = copy(M)
+
+    nqbit = length(sitepos)
+    for n in 1:nqbit
+        p = sitepos[n]
+        res[p] *= op("Phase", siteind(res, p); ϕ=θ * 2^(nqbit - n))
+    end
+
+    return noprime(res)
+end

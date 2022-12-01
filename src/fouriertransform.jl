@@ -151,9 +151,14 @@ end
 
 nbit(ft::AbstractFT) = length(ft.ftcore.forward)
 
-"""
+@doc raw"""
 sites[1] corresponds to the most significant digit.
 sign = 1
+
+```math
+    Y(y) = \frac{1}{\sqrt{N}} \sum_{x=0}^{N-1} X(x) e^{s i \frac{2\pi (y + y0) (x + x0)}{N}},
+```
+
 """
 function forwardmpo(ftcore::FTCore, sites)
     M = copy(ftcore.forward)
@@ -167,31 +172,54 @@ function backwardmpo(ftcore::FTCore, sites)
     return M
 end
 
+
+function _apply_qft(M::MPO, gsrc::MPS, target_sites, sitepos, sitesdst; kwargs...)
+    replace_mpo_siteinds!(M, extractsites(M), target_sites)
+    M = matchsiteinds(M, siteinds(gsrc))
+    gdst = ITensors.apply(M, gsrc; kwargs...)
+
+    N = length(target_sites)
+    for n in eachindex(target_sites)
+        replaceind!(gdst[sitepos[n]], target_sites[n], sitesdst[N - n + 1])
+    end
+
+    return gdst
+end
+
+
 @doc raw"""
-sitesrc[1] / sitesrc[end] corresponds to the most/least significant digit of the input.
+Perform Fourier transform for a subset of qubit indices.
+
+We define two integers using the binary format: ``x = (x_1 x_2 ...., x_N)_2``, ``y = (y_1 y_2 ...., y_N)_2``,
+where the right most digits are the least significant digits.
+
+The variable `x` is denoted as `src` (source), and the variable `y` is denoted as `dst` (destination).
+
+Our definition of the Fourier transform is
+
+```math
+    Y(y) = \frac{1}{\sqrt{N}} \sum_{x=0}^{N-1} X(x) e^{s i \frac{2\pi (y + y_0) (x + x_0)}{N}}
+```
+
+where ``s = \pm 1``, ``x_0`` and ``y_0`` are constants.
+
+sitessrc[1] / sitessrc[end] corresponds to the most/least significant digit of the input.
 sitesdst[1] / sitesdst[end] corresponds to the most/least significant digit of the output.
+
+`siteinds(M)` must contain `sitessrc` in ascending or descending order.
+Instead of specifying `sitessrc`, one can specify the source sites by setting `tag`.
+If `tag` = `x`, all sites with tags `x=1`, `x=2` are used as `sitessrc`.
 """
 function fouriertransform(M::MPS;
                           sign::Int=1,
                           tag::String="",
                           sitessrc=nothing,
                           sitesdst=nothing,
+                          originsrc::Float64=0.,
+                          origindst::Float64=0.,
                           cutoff_MPO=1e-25, kwargs...)
-    if tag == "" && sitessrc === nothing
-        error("tag or sitesrc must be specified")
-    elseif tag != "" && sitessrc !== nothing
-        error("tag and sitesrc are exclusive")
-    end
-
-    # Set input site indices
-    if tag != ""
-        sites = siteinds(M)
-        sitepos = findallsites_by_tag(sites; tag=tag)
-        target_sites = [sites[p] for p in sitepos]
-    elseif sitesrc !== nothing
-        target_sites = sitesrc
-        sitepos = [findsite(M, s) for s in target_sites]
-    end
+    sites = siteinds(M)
+    sitepos, target_sites = _find_target_sites(M; sitessrc=sitessrc, tag=tag)
 
     if sitesdst === nothing
         sitesdst = target_sites
@@ -201,14 +229,25 @@ function fouriertransform(M::MPS;
         error("Invalid target_sites")
     end
 
+    # Prepare MPO for QFT
     MQ_ = _qft(target_sites; sign=sign, cutoff=cutoff_MPO)
     MQ = matchsiteinds(MQ_, sites)
-    M_result = apply(MQ, M; kwargs...)
+
+    # Phase shift from origindst
+    M_result = phase_rotation(M, sign * 2π * origindst/(2.0^length(sitepos)); targetsites=target_sites)
+
+    # Apply QFT
+    M_result = apply(MQ, M_result; kwargs...)
 
     N = length(target_sites)
     for n in eachindex(target_sites)
         replaceind!(M_result[sitepos[n]], target_sites[n], sitesdst[N - n + 1])
     end
+
+    # Phase shift from originsrc
+    M_result = phase_rotation(M_result, sign * 2π * originsrc/(2.0^length(sitepos)); targetsites=sitesdst)
+
+    M_result *= exp(sign * im * 2π * originsrc * origindst/2.0^length(sitepos))
 
     return M_result
 end

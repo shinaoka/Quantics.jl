@@ -3,7 +3,7 @@ module MSSTA
 using ITensors
 import ITensors
 import ITensors.NDTensors: Tensor, BlockSparseTensor, blockview
-import SparseIR: Fermionic, Bosonic
+import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 
 include("mpsedge.jl")

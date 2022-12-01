@@ -74,6 +74,22 @@ using ITensors
 
         @test f_reconst ≈ f_ref
     end
+
+    @testset "phase_rotation" begin
+        nqbit = 3
+        xvec = collect(0:2^nqbit-1)
+        θ = 0.1
+        sites = [Index(2, "Qubit,x=$x") for x in 1:nqbit]
+        _reconst(x) = vec(Array(reduce(*, x), reverse(sites)))
+
+        f = randomMPS(sites)
+        f_vec = _reconst(f)
+
+        ref = exp.(im * θ * xvec) .* f_vec
+
+        @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; tag="x"))
+        @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; targetsites=sites))
+    end
 end
 
 nothing
