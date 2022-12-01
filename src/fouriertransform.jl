@@ -190,7 +190,7 @@ end
 @doc raw"""
 Perform Fourier transform for a subset of qubit indices.
 
-We define two integers using the binary format: ``x = (x_1 x_2 ...., x_N)_2``, ``y = (y_1 y_2 ...., y_N)_2``,
+We define two integers using the binary format: ``x = (x_1 x_2 ...., x_R)_2``, ``y = (y_1 y_2 ...., y_R)_2``,
 where the right most digits are the least significant digits.
 
 The variable `x` is denoted as `src` (source), and the variable `y` is denoted as `dst` (destination).
@@ -201,10 +201,10 @@ Our definition of the Fourier transform is
     Y(y) = \frac{1}{\sqrt{N}} \sum_{x=0}^{N-1} X(x) e^{s i \frac{2\pi (y + y_0) (x + x_0)}{N}}
 ```
 
-where ``s = \pm 1``, ``x_0`` and ``y_0`` are constants.
+where ``s = \pm 1``, ``x_0`` and ``y_0`` are constants, ``N=2^R``.
 
-sitessrc[1] / sitessrc[end] corresponds to the most/least significant digit of the input.
-sitesdst[1] / sitesdst[end] corresponds to the most/least significant digit of the output.
+`sitessrc[1]` / `sitessrc[end]` corresponds to the most/least significant digit of the input.
+`sitesdst[1]` / `sitesdst[end]` corresponds to the most/least significant digit of the output.
 
 `siteinds(M)` must contain `sitessrc` in ascending or descending order.
 Instead of specifying `sitessrc`, one can specify the source sites by setting `tag`.
