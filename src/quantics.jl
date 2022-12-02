@@ -41,3 +41,23 @@ function qubit_to_quantics(::Val{N}, indices::Vector{Int}) where {N}
     nquantics = size(indices_, 2)
     return collect(Iterators.flatten(qubit_to_quantics(indices_[:, n]) for n in 1:nquantics))
 end
+
+
+"""
+Convert 1-based quantics indices of size 2^N to N integer indices
+"""
+function quantics_to_index(::Val{N}, quantics_inds::Vector{Int}) where {N}
+    nquantics = length(quantics_inds)
+    qubit_inds = reshape(quantics_to_qubit(Val(N), quantics_inds), N, nquantics)
+
+    res = ones(Int, N) # TODO: Replace by MVector
+    c = 2^(nquantics-1)
+    for iq in 1:nquantics
+        for n in 1:N
+            res[n] += c * (qubit_inds[n, iq] - 1)
+        end
+        c = c >> 1
+    end
+    return NTuple{N,Int}(res)
+end
+
