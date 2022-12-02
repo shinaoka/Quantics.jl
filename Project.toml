@@ -8,6 +8,7 @@ ITensorTDVP = "25707e16-a4db-4a07-99d9-4d67b7af0342"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseIR = "4fe2279e-80f0-4adb-8463-ee114ff56b7d"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 ITensorTDVP = "0.0.4"

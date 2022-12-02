@@ -5,6 +5,7 @@ import ITensors
 import ITensors.NDTensors: Tensor, BlockSparseTensor, blockview
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
+using StaticArrays
 
 include("mpsedge.jl")
 include("util.jl")

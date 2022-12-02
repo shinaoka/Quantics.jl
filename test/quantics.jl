@@ -1,13 +1,18 @@
 using Test
 import MSSTA: quantics_to_qubit, qubit_to_quantics, quantics_to_index
 using ITensors
+using StaticArrays
+
+function _to_ntuple(v::MVector{N,T}) where {N,T}
+    return v.data
+end
 
 @testset "quantics.jl" begin
     @testset "quantics_to_qubit" begin
-        @test quantics_to_qubit(Val(2), 1) == (1, 1)
-        @test quantics_to_qubit(Val(2), 2) == (1, 2)
-        @test quantics_to_qubit(Val(2), 3) == (2, 1)
-        @test quantics_to_qubit(Val(2), 4) == (2, 2)
+        @test _to_ntuple(quantics_to_qubit(Val(2), 1)) == (1, 1)
+        @test _to_ntuple(quantics_to_qubit(Val(2), 2)) == (1, 2)
+        @test _to_ntuple(quantics_to_qubit(Val(2), 3)) == (2, 1)
+        @test _to_ntuple(quantics_to_qubit(Val(2), 4)) == (2, 2)
         @test quantics_to_qubit(Val(2), [1, 2, 3, 4]) == [1, 1, 1, 2, 2, 1, 2, 2]
     end
 

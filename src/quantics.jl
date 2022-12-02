@@ -3,18 +3,18 @@ Convert a 1-based quantics integer index to 1-based qubit indices
 """
 function quantics_to_qubit(::Val{N}, i::Int) where {N}
     @assert 1 ≤ i ≤ 2^N
-    b = Vector{Int}(undef, N)
+    b = zeros(MVector{N,Int})
     i -= 1
     for n in 1:N
         i, b[N - n + 1] = divrem(i, 2)
     end
-    return NTuple{N,Int}(b .+ 1)
+    return b .+ 1
 end
 
 """
 Convert 1-based quantics indices to 1-based qubit indices
 """
-function quantics_to_qubit(::Val{N}, indices::Vector{Int}) where {N}
+function quantics_to_qubit(::Val{N}, indices::AbstractVector{Int}) where {N}
     return collect(Iterators.flatten(quantics_to_qubit.(Val(N), indices)))
 end
 
@@ -50,7 +50,7 @@ function quantics_to_index(::Val{N}, quantics_inds::Vector{Int}) where {N}
     nquantics = length(quantics_inds)
     qubit_inds = reshape(quantics_to_qubit(Val(N), quantics_inds), N, nquantics)
 
-    res = ones(Int, N) # TODO: Replace by MVector
+    res = ones(MVector{N,Int})
     c = 2^(nquantics-1)
     for iq in 1:nquantics
         for n in 1:N
