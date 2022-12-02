@@ -1,5 +1,5 @@
 using Test
-import MSSTA: quantics_to_qubit, qubit_to_quantics, quantics_to_index
+import MSSTA: QuanticsInd, QubitInd, asqubit, asquantics, asqubits, quantics_to_index
 using ITensors
 using StaticArrays
 
@@ -9,20 +9,21 @@ end
 
 @testset "quantics.jl" begin
     @testset "quantics_to_qubit" begin
-        @test _to_ntuple(quantics_to_qubit(Val(2), 1)) == (1, 1)
-        @test _to_ntuple(quantics_to_qubit(Val(2), 2)) == (1, 2)
-        @test _to_ntuple(quantics_to_qubit(Val(2), 3)) == (2, 1)
-        @test _to_ntuple(quantics_to_qubit(Val(2), 4)) == (2, 2)
-        @test quantics_to_qubit(Val(2), [1, 2, 3, 4]) == [1, 1, 1, 2, 2, 1, 2, 2]
+        @test asqubit(QuanticsInd{2}(1)) == Tuple(QubitInd.((1, 1)))
+        @test asqubit(QuanticsInd{2}(2)) == Tuple(QubitInd.((1, 2)))
+        @test asqubit(QuanticsInd{2}(3)) == Tuple(QubitInd.((2, 1)))
+        @test asqubit(QuanticsInd{2}(4)) == Tuple(QubitInd.((2, 2)))
+        @test asqubits(QuanticsInd{2}.([1, 2, 3, 4])) == QubitInd.([1, 1, 1, 2, 2, 1, 2, 2])
     end
 
     @testset "qubit_to_quantics" begin
-        @test qubit_to_quantics([1, 1]) == 1
-        @test qubit_to_quantics([1, 2]) == 2
-        @test qubit_to_quantics([2, 1]) == 3
-        @test qubit_to_quantics([2, 2]) == 4
-
-        @test qubit_to_quantics(Val(2), [1, 1, 1, 2, 2, 1, 2, 2]) == [1, 2, 3, 4]
+        N = 2
+        @test QuanticsInd{N}(asqubits((1, 1))) == QuanticsInd{N}(1)
+        @test QuanticsInd{N}(asqubits((1, 2))) == QuanticsInd{N}(2)
+        @test QuanticsInd{N}(asqubits((2, 1))) == QuanticsInd{N}(3)
+        @test QuanticsInd{N}(asqubits((2, 2))) == QuanticsInd{N}(4)
+        @test asquantics(Val(2), QubitInd.([1, 1, 1, 2, 2, 1, 2, 2])) ==
+              QuanticsInd{N}.([1, 2, 3, 4])
     end
 
     @testset "quantics_to_index" begin
@@ -32,7 +33,8 @@ end
         # 3        => (2, 1)
         #
         # index = (4, 3)
-        @test quantics_to_index(Val(2), [1, 4, 3])  == (4, 3)
+        N = 2
+        @test quantics_to_index(QuanticsInd{N}.([1, 4, 3])) == (4, 3)
     end
 end
 
