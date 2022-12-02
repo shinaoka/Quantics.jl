@@ -8,6 +8,7 @@ import LinearAlgebra: I
 
 include("mpsedge.jl")
 include("util.jl")
+include("quantics.jl")
 include("binaryop.jl")
 include("mul.jl")
 include("mps.jl")

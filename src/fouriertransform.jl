@@ -172,7 +172,6 @@ function backwardmpo(ftcore::FTCore, sites)
     return M
 end
 
-
 function _apply_qft(M::MPO, gsrc::MPS, target_sites, sitepos, sitesdst; kwargs...)
     replace_mpo_siteinds!(M, extractsites(M), target_sites)
     M = matchsiteinds(M, siteinds(gsrc))
@@ -185,7 +184,6 @@ function _apply_qft(M::MPO, gsrc::MPS, target_sites, sitepos, sitesdst; kwargs..
 
     return gdst
 end
-
 
 @doc raw"""
 Perform Fourier transform for a subset of qubit indices.
@@ -215,8 +213,8 @@ function fouriertransform(M::MPS;
                           tag::String="",
                           sitessrc=nothing,
                           sitesdst=nothing,
-                          originsrc::Float64=0.,
-                          origindst::Float64=0.,
+                          originsrc::Float64=0.0,
+                          origindst::Float64=0.0,
                           cutoff_MPO=1e-25, kwargs...)
     sites = siteinds(M)
     sitepos, target_sites = _find_target_sites(M; sitessrc=sitessrc, tag=tag)
@@ -234,7 +232,8 @@ function fouriertransform(M::MPS;
     MQ = matchsiteinds(MQ_, sites)
 
     # Phase shift from origindst
-    M_result = phase_rotation(M, sign * 2π * origindst/(2.0^length(sitepos)); targetsites=target_sites)
+    M_result = phase_rotation(M, sign * 2π * origindst / (2.0^length(sitepos));
+                              targetsites=target_sites)
 
     # Apply QFT
     M_result = apply(MQ, M_result; kwargs...)
@@ -245,9 +244,10 @@ function fouriertransform(M::MPS;
     end
 
     # Phase shift from originsrc
-    M_result = phase_rotation(M_result, sign * 2π * originsrc/(2.0^length(sitepos)); targetsites=sitesdst)
+    M_result = phase_rotation(M_result, sign * 2π * originsrc / (2.0^length(sitepos));
+                              targetsites=sitesdst)
 
-    M_result *= exp(sign * im * 2π * originsrc * origindst/2.0^length(sitepos))
+    M_result *= exp(sign * im * 2π * originsrc * origindst / 2.0^length(sitepos))
 
     return M_result
 end

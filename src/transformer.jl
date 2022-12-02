@@ -54,7 +54,6 @@ function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
     return apply(transformer, M; kwargs...)
 end
 
-
 """
 Multiply by exp(i θ x), where x = (x_1, ..., x_R)_2.
 """

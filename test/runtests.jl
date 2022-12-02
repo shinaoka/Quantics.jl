@@ -3,6 +3,7 @@ using MSSTA
 
 @testset "MSSTA.jl" begin
     include("util.jl")
+    include("quantics.jl")
     include("binaryop.jl")
     include("fouriertransform.jl")
     include("imaginarytime.jl")

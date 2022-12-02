@@ -10,9 +10,8 @@ struct ImaginaryTimeFT <: AbstractFT
     end
 end
 
-
 _θ_stat(::Fermionic, N) = π * ((-N + 1) / N)
-_θ_stat(::Bosonic, N) = - π
+_θ_stat(::Bosonic, N) = -π
 
 _stat_shift(::Fermionic) = 1
 _stat_shift(::Bosonic) = 0
@@ -24,14 +23,14 @@ function _to_wn_MPO(stat::Statistics, beta::Float64, nqbit; cutoff=1e-25)
     sites = siteinds("Qubit", nqbit)
     N = 2^nqbit
     M = (beta * 2^(-nqbit / 2)) * MSSTA._qft(sites; cutoff=cutoff)
-    M = replaceprime(M, 0=>1, 1=>2)
+    M = replaceprime(M, 0 => 1, 1 => 2)
 
     θ = _θ_stat(stat, N)
     for n in 1:nqbit
         M[n] *= op("Phase", sites[n]; ϕ=θ * 2^(nqbit - n))
     end
 
-    M = replaceprime(M, 1=>0, 2=>1)
+    M = replaceprime(M, 1 => 0, 2 => 1)
     MSSTA.cleanup_linkinds!(M)
 
     return M
@@ -47,7 +46,7 @@ function _to_tau_MPO(stat::Statistics, beta::Float64, nqbit; cutoff=1e-25)
 
     θ = -_θ_stat(stat, N)
     for n in 1:nqbit
-        M[n] *= replaceprime(op("Phase", sites[n]; ϕ=θ * 2^(nqbit - n)), 0=>1, 1=>2)
+        M[n] *= replaceprime(op("Phase", sites[n]; ϕ=θ * 2^(nqbit - n)), 0 => 1, 1 => 2)
     end
 
     #M = replaceprime(M, 2=>1)
@@ -58,22 +57,25 @@ function _to_tau_MPO(stat::Statistics, beta::Float64, nqbit; cutoff=1e-25)
     return M
 end
 
-
-function to_wn(stat::Statistics, gtau::MPS, beta::Float64; sitessrc=nothing, tag="", sitesdst=nothing, kwargs...)::MPS
+function to_wn(stat::Statistics, gtau::MPS, beta::Float64; sitessrc=nothing, tag="",
+               sitesdst=nothing, kwargs...)::MPS
     sitepos, _ = _find_target_sites(gtau; sitessrc=sitessrc, tag=tag)
     nqbit_t = length(sitepos)
-    originwn = 0.5*(-2.0^nqbit_t + _stat_shift(stat))
-    giv = fouriertransform(gtau; tag=tag, sitessrc=sitessrc, sitesdst=sitesdst, origindst=originwn)
+    originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
+    giv = fouriertransform(gtau; tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
+                           origindst=originwn)
     giv *= (beta * 2^(-nqbit_t / 2))
     return giv
 end
 
-function to_tau(stat::Statistics, giv::MPS, beta::Float64; sitessrc=nothing, tag="", sitesdst=nothing, kwargs...)::MPS
+function to_tau(stat::Statistics, giv::MPS, beta::Float64; sitessrc=nothing, tag="",
+                sitesdst=nothing, kwargs...)::MPS
     sitepos, _ = _find_target_sites(giv; sitessrc=sitessrc, tag=tag)
     nqbit_t = length(sitepos)
-    originwn = 0.5*(-2.0^nqbit_t + _stat_shift(stat))
-    gtau = fouriertransform(giv; sign=-1, tag=tag, sitessrc=sitessrc, sitesdst=sitesdst, originsrc=originwn)
-    gtau *= ((2^(nqbit_t / 2)) / beta) 
+    originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
+    gtau = fouriertransform(giv; sign=-1, tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
+                            originsrc=originwn)
+    gtau *= ((2^(nqbit_t / 2)) / beta)
     return gtau
 end
 
@@ -115,7 +117,7 @@ end
 """
 w = (w_1 w_2, ..., w_R)_2
 In the resultant MPS, the site indices are
-   w_R, w_{R-1}, ..., w_1 from the left to the right.
+w_R, w_{R-1}, ..., w_1 from the left to the right.
 
 sites: indices for w_1, ..., w_R in this order.
 """

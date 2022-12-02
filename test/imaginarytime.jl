@@ -50,7 +50,8 @@ end
         sitesτ = [Index(2, "Qubit,τ=$n") for n in 1:nbit]
         sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
         gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sitesτ; cutoff=1e-20)
-        giv_mps = MSSTA.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ", sitesdst=sitesiω)
+        giv_mps = MSSTA.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ",
+                              sitesdst=sitesiω)
 
         giv = vec(Array(reduce(*, giv_mps), reverse(sitesiω)...))
 
@@ -69,7 +70,8 @@ end
         sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
         giv_mps = MSSTA.decompose_giv(giv_smpl, sitesiω; cutoff=1e-20)
 
-        gtau_mps = MSSTA.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω", sitesdst=sitesτ)
+        gtau_mps = MSSTA.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω",
+                                sitesdst=sitesτ)
 
         gtau = vec(Array(reduce(*, gtau_mps), reverse(sitesτ)...))
 

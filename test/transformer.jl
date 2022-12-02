@@ -77,7 +77,7 @@ using ITensors
 
     @testset "phase_rotation" begin
         nqbit = 3
-        xvec = collect(0:2^nqbit-1)
+        xvec = collect(0:(2^nqbit - 1))
         θ = 0.1
         sites = [Index(2, "Qubit,x=$x") for x in 1:nqbit]
         _reconst(x) = vec(Array(reduce(*, x), reverse(sites)))

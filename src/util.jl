@@ -454,7 +454,6 @@ function directprod(::Type{T}, sites, indices) where {T}
     return MPS(tensors)
 end
 
-
 function _find_target_sites(M::MPS; sitessrc=nothing, tag="")
     if tag == "" && sitessrc === nothing
         error("tag or sitesrc must be specified")
