@@ -69,3 +69,42 @@ function phase_rotation(M::MPS, θ::Float64; targetsites=nothing, tag="")
 
     return noprime(res)
 end
+
+"""
+Add new site indices to an MPS
+"""
+function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, tag="")
+    which_new ∈ ["left", "right"] || error("Invalid which_new: left or right")
+    sitepos, target_sites = MSSTA._find_target_sites(M; sitessrc=targetsites, tag=tag)
+    length(sitepos) == length(newsites) ||
+        error("Length mismatch: $(newsites) vs $(target_sites)")
+    M_ = MSSTA.addedges(M)
+    links = linkinds(M_)
+
+    tensors = ITensor[]
+    for p in 1:length(M)
+        if !(p ∈ sitepos)
+            push!(tensors, M[p])
+            continue
+        end
+        i = findfirst(x -> x == p, sitepos)
+        s = target_sites[i]
+        s1 = sim(s)
+        ll, lr = links[p], links[p + 1]
+        t = replaceind(M_[p], s => s1)
+        if which_new == "right"
+            tl, tr = factorize(delta(s1, s, newsites[i]) * t, ll, s)
+        else
+            tl, tr = factorize(delta(s1, s, newsites[i]) * t, ll, newsites[i])
+        end
+        push!(tensors, tl)
+        push!(tensors, tr)
+    end
+
+    tensors[1] *= onehot(links[1] => 1)
+    tensors[end] *= onehot(links[end] => 1)
+
+    M_result = MPS(tensors)
+    MSSTA.cleanup_linkinds!(M_result)
+    return M_result
+end

@@ -1,6 +1,7 @@
 using Test
 import MSSTA
 using ITensors
+using LinearAlgebra
 
 @testset "util.jl" begin
     @testset "flip" for nbit in 2:3, mostsignificantdigit in [:left, :right]
@@ -89,6 +90,25 @@ using ITensors
 
         @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; tag="x"))
         @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; targetsites=sites))
+    end
+
+    @testset "asdiagonal" begin
+        R = 2
+        sites = siteinds("Qubit", R)
+        sites′ = [Index(2, "Qubit,n′=$n") for n in 1:R]
+
+        M = randomMPS(sites)
+
+        for which_new in ["left", "right"]
+            Mnew = MSSTA.asdiagonal(M, sites′; tag="n", which_new=which_new)
+
+            M_reconst = reshape(Array(reduce(*, M), reverse(sites)), 2^R)
+            Mnew_reconst = reshape(Array(reduce(*, Mnew),
+                                         vcat(reverse(sites), reverse(sites′))), 2^R, 2^R)
+
+            @assert diag(Mnew_reconst) ≈ M_reconst
+            @assert LinearAlgebra.diagm(M_reconst) ≈ Mnew_reconst
+        end
     end
 end
 
