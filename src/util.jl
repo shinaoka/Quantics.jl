@@ -469,12 +469,22 @@ function _find_target_sites(M::MPS; sitessrc=nothing, tag="")
     elseif sitessrc !== nothing
         target_sites = sitessrc
         sitepos = Int[findsite(M, s) for s in sitessrc]
-        #@show M
-        #@show siteind(M, 1)
-        #@show sitessrc[1]
-        #@show findsite(M, siteind(M, 1))
-        #@show findsite(M, sitessrc[1])
     end
 
     return sitepos, target_sites
+end
+
+
+function replace_siteinds_part!(M::MPS, sitesold, sitesnew)
+    length(sitesold) == length(sitesnew) || error("Length mismatch between sitesold and sitesnew")
+
+    for i in eachindex(sitesold)
+        p = findsite(M, sitesold[i])
+        if p === nothing
+            error("Not found $(sitesold[i])")
+        end
+        replaceinds!(M[p], sitesold[i]=>sitesnew[i])
+    end
+
+    return nothing
 end
