@@ -123,9 +123,9 @@ function splitsiteind(M::MPS, sites; targetcsites=siteinds(M))
     !hasedge(M) || error("M must not have edges")
     2 * length(targetcsites) == length(sites) || error("Length mismatch")
 
-    sites_M = siteinds(M)
     sites_res = siteinds(M)
-    addedges!(M) # This will be canceled out by the following removeedges!
+    M = deepcopy(M)
+    addedges!(M)
 
     res = copy(M)
     for n in eachindex(targetcsites)
@@ -133,7 +133,6 @@ function splitsiteind(M::MPS, sites; targetcsites=siteinds(M))
                                        targetcsites[n])
     end
 
-    removeedges!(M, sites_M)
     removeedges!(res, sites_res)
     return res
 end
