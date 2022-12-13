@@ -148,7 +148,8 @@ using ITensors
         M2_reconst = Array(reduce(*, M2), sites2)
         M12_reconst = Array(reduce(*, M12), vcat(sites1, sites2))
 
-        M12_ref = reshape(reshape(M1_reconst, 2^2, 1) * reshape(M2_reconst, 1, 2^2), 2, 2, 2, 2)
+        M12_ref = reshape(reshape(M1_reconst, 2^2, 1) * reshape(M2_reconst, 1, 2^2), 2, 2,
+                          2, 2)
 
         @test M12_reconst ≈ M12_ref
     end

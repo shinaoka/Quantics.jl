@@ -11,7 +11,7 @@ end
 
 Base.convert(::Type{Int}, x::QuanticsInd{N}) where {N} = x.data
 const QubitInd = QuanticsInd{2}
-quanticsdim(::QuanticsInd{N}) where N = N
+quanticsdim(::QuanticsInd{N}) where {N} = N
 
 Base.convert(::Type{QubitInd}, x::T) where {T<:Integer} = QubitInd(x)
 

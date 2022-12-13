@@ -101,16 +101,10 @@ function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, ta
         push!(tensors, tr)
     end
 
-    @show inds(tensors[1])
-    @show inds(tensors[end])
     tensors[1] *= onehot(links[1] => 1)
     tensors[end] *= onehot(links[end] => 1)
-    @show inds(tensors[1])
-    @show inds(tensors[end])
 
     M_result = MPS(tensors)
-    @show inds(M[1])
-    @show inds(M[end])
     MSSTA.cleanup_linkinds!(M_result)
     return M_result
 end

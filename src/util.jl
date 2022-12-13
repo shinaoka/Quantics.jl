@@ -473,16 +473,16 @@ function _find_target_sites(M::MPS; sitessrc=nothing, tag="")
     return sitepos, target_sites
 end
 
-
 function replace_siteinds_part!(M::MPS, sitesold, sitesnew)
-    length(sitesold) == length(sitesnew) || error("Length mismatch between sitesold and sitesnew")
+    length(sitesold) == length(sitesnew) ||
+        error("Length mismatch between sitesold and sitesnew")
 
     for i in eachindex(sitesold)
         p = findsite(M, sitesold[i])
         if p === nothing
             error("Not found $(sitesold[i])")
         end
-        replaceinds!(M[p], sitesold[i]=>sitesnew[i])
+        replaceinds!(M[p], sitesold[i] => sitesnew[i])
     end
 
     return nothing
