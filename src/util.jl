@@ -487,3 +487,23 @@ function replace_siteinds_part!(M::MPS, sitesold, sitesnew)
 
     return nothing
 end
+
+"""
+Connect two MPS's
+ITensor objects are deepcopied.
+"""
+function _directprod(M1::MPS, Mx::MPS...)::MPS
+    M2 = Mx[1]
+    l = Index(1, "Link")
+    tensors1 = [deepcopy(x) for x in M1]
+    tensors2 = [deepcopy(x) for x in M2]
+    tensors1[end] = ITensor(ITensors.data(last(tensors1)), [inds(last(tensors1))..., l])
+    tensors2[1] = ITensor(ITensors.data(first(tensors2)), [l, inds(first(tensors2))...])
+
+    M12 = MPS([tensors1..., tensors2...])
+    if length(Mx) == 1
+        return M12
+    else
+        return _directprod(M12, Mx[2:end]...)
+    end
+end

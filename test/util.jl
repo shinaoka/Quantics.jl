@@ -136,6 +136,22 @@ using ITensors
         end
         @test flag
     end
+
+    @testset "_directprod" begin
+        sites1 = siteinds("Qubit", 2)
+        sites2 = siteinds("Qubit", 2)
+        M1 = randomMPS(sites1)
+        M2 = randomMPS(sites2)
+        M12 = MSSTA._directprod(M1, M2)
+
+        M1_reconst = Array(reduce(*, M1), sites1)
+        M2_reconst = Array(reduce(*, M2), sites2)
+        M12_reconst = Array(reduce(*, M12), vcat(sites1, sites2))
+
+        M12_ref = reshape(reshape(M1_reconst, 2^2, 1) * reshape(M2_reconst, 1, 2^2), 2, 2, 2, 2)
+
+        @test M12_reconst ≈ M12_ref
+    end
 end
 
 nothing
