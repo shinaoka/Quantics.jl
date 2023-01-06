@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.3"
+julia_version = "1.8.4"
 manifest_format = "2.0"
-project_hash = "392d342b323d8ff81cc5e9c713c4f0bf474ca2e8"
+project_hash = "75b3b9d7dd77ce2c56b1a2332c63bbadc0d03bd3"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
@@ -46,7 +46,7 @@ version = "3.46.0"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.0.1+0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -365,6 +365,14 @@ version = "1.0.0"
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.1"
+
+[[deps.TensorCrossInterpolation]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "a3576767a31aa713910bb31d0bdac074f0683b83"
+repo-rev = "main"
+repo-url = "git@gitlab.com:quanticstci/tensorcrossinterpolation.jl.git"
+uuid = "b261b2ec-6378-4871-b32e-9173bb050604"
+version = "0.1.0"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]

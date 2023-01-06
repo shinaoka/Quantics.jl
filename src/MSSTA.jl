@@ -7,6 +7,7 @@ import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 using StaticArrays
 using TensorCrossInterpolation
+import TensorCrossInterpolation: TensorCI
 
 include("mpsedge.jl")
 include("util.jl")
