@@ -1,6 +1,6 @@
 function TCItoMPS(tci::TensorCI{T}, sites=nothing) where {T}
-    tensors = tensortrain(tci)
-    ranks = rank(tci)
+    tensors = TCI.tensortrain(tci)
+    ranks = TCI.rank(tci)
     N = length(tensors)
     localdims = [size(t, 2) for t in tensors]
 

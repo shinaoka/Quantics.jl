@@ -8,6 +8,7 @@ import LinearAlgebra: I
 using StaticArrays
 using TensorCrossInterpolation
 import TensorCrossInterpolation: TensorCI
+import TensorCrossInterpolation as TCI
 
 include("mpsedge.jl")
 include("util.jl")
