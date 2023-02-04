@@ -12,7 +12,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TensorCrossInterpolation = "b261b2ec-6378-4871-b32e-9173bb050604"
 
 [compat]
-ITensorTDVP = "0.0.4"
+ITensorTDVP = "0.0.4, 0.1"
 ITensors = "^0.3"
 SparseIR = "^0.96, 0.97, 1"
 StaticArrays = "1"
