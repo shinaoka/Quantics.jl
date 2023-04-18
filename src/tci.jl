@@ -7,7 +7,7 @@ function TCItoMPS(tci::TensorCI{T}, sites=nothing) where {T}
     if sites === nothing
         sites = [Index(localdims[n], "n=$n") for n in 1:N]
     else
-        all(ranks .== dim.(sites)) &&
+        all(localdims .== dim.(sites)) &&
             error("ranks are not consistent with dimension of sites")
     end
 
