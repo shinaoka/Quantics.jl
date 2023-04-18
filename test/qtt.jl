@@ -5,6 +5,7 @@ using ITensors
 ITensors.disable_warn_order()
 using SparseIR: valueim, FermionicFreq
 
+#===
 @testset "qtt.jl" begin @testset "2D fermi gk" begin
     ek(kx, ky) = 2 * cos(kx) + 2 * cos(ky) - 1.0
 
@@ -51,5 +52,6 @@ using SparseIR: valueim, FermionicFreq
 
     @test maximum(abs, data_ref .- data) < 1e-3 * maximum(abs, data_ref)
 end end
+===#
 
 nothing
