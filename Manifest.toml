@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.3"
+julia_version = "1.8.1"
 manifest_format = "2.0"
-project_hash = "f128b76a0f47339bce2618cbad935018370b3575"
+project_hash = "042a7005925e0545351a7f4ec25e76542e2172e8"
 
 [[deps.Accessors]]
 deps = ["Compat", "CompositionsBase", "ConstructionBase", "Dates", "InverseFunctions", "LinearAlgebra", "MacroTools", "Requires", "StaticArrays", "Test"]
@@ -529,7 +529,15 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.1"
+version = "1.10.0"
+
+[[deps.TensorCrossInterpolation]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "a3576767a31aa713910bb31d0bdac074f0683b83"
+repo-rev = "main"
+repo-url = "../tensorcrossinterpolation.jl"
+uuid = "b261b2ec-6378-4871-b32e-9173bb050604"
+version = "0.1.0"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
