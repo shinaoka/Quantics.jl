@@ -3,7 +3,35 @@ import MSSTA
 using ITensors
 using LinearAlgebra
 
-@testset "util.jl" begin
+@testset "transformer.jl" begin
+    @testset "upper_lower_triangle" for upper_or_lower in [:upper, :lower]
+        R = 3
+        sites = siteinds("Qubit", R)
+        trimat = MSSTA.upper_lower_triangle_matrix(sites, 1.0; upper_or_lower=upper_or_lower)
+        trimatdata = Array(reduce(*, trimat), [reverse(sites')..., reverse(sites)...])
+        trimatdata = reshape(trimatdata, 2^R, 2^R)
+
+        ref = upper_or_lower == :lower ? [Float64(i>j) for i in 1:2^R, j in 1:2^R] : [Float64(i<j) for i in 1:2^R, j in 1:2^R] 
+
+        @test trimatdata ≈ ref
+    end
+
+    @testset "cusum" begin
+        R = 3
+        sites = siteinds("Qubit", R)
+        UT = MSSTA.upper_lower_triangle_matrix(sites, 1.0; upper_or_lower=:lower)
+        f = MSSTA.expqtt(sites, -1.0)
+        f_values = vec(Array(reduce(*, f), reverse(sites)))
+        xs = collect(LinRange(0, 1, 2^R+1)[1:end-1])
+
+        g = apply(UT, f)
+        g_values = vec(Array(reduce(*, g), reverse(sites)))
+
+        g_values_ref = cumsum(f_values) .- f_values # Second term remove the own values
+
+        @test g_values ≈ g_values_ref
+    end
+
     @testset "flip" for nbit in 2:3, mostsignificantdigit in [:left, :right]
         sites = siteinds("Qubit", nbit)
 

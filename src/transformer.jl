@@ -70,6 +70,60 @@ function phase_rotation(M::MPS, θ::Float64; targetsites=nothing, tag="")
     return noprime(res)
 end
 
+function _upper_lower_triangle(upper_or_lower::Symbol)::Array{Float64,4}
+    upper_or_lower ∈ [:upper, :lower] || error("Invalid upper_or_lower $(upper_or_lower)")
+    T = Float64
+    t = zeros(T, 2, 2, 2, 2) # left link, right link, site', site
+
+    t[1, 1, 1, 1] = one(T)
+    t[1, 1, 2, 2] = one(T)
+    
+    if upper_or_lower == :upper
+        t[1, 2, 1, 2] = one(T)
+        t[1, 2, 2, 1] = zero(T)
+    else
+        t[1, 2, 1, 2] = zero(T)
+        t[1, 2, 2, 1] = one(T)
+    end
+
+    # If a comparison is made at a higher bit, we respect it.
+    t[2, 2, :, :] .= one(T)
+
+    return t
+end
+
+"""
+Create QTT for a upper/lower triangle matrix filled with one except the diagonal line
+"""
+function upper_lower_triangle_matrix(sites::Vector{Index{T}}, value::S; upper_or_lower::Symbol=:upper)::MPO where {T,S}
+    upper_or_lower ∈ [:upper, :lower] || error("Invalid upper_or_lower $(upper_or_lower)")
+    N = length(sites)
+
+    t = _upper_lower_triangle(upper_or_lower)
+
+    M = MPO(N)
+    links = [Index(2, "Link,l=$l") for l in 1:(N + 1)]
+    for n in 1:N
+        M[n] = ITensor(t, (links[n], links[n + 1], sites[n]', sites[n]))
+    end
+
+    M[1] *= onehot(links[1] => 1)
+    M[N] *= ITensor(S[0, value], links[N+1])
+
+    return M
+end
+
+"""
+Create MPO for cumulative sum in QTT
+
+includeown = False
+    y_i = sum_{j=1}^{i-1} x_j
+"""
+function cumsum(sites::Vector{Index}; includeown::Bool=false)
+    includeown == False || error("includeown = True has not been implmented yet")
+    return upper_triangle_matrix(sites, 1.0)
+end
+
 """
 Add new site indices to an MPS
 """
