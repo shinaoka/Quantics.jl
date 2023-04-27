@@ -1,3 +1,7 @@
+using TensorCrossInterpolation
+import TensorCrossInterpolation: TensorCI, CachedFunction
+import TensorCrossInterpolation as TCI
+
 function TCItoMPS(tci::TensorCI{T}, sites=nothing) where {T}
     tensors = TCI.tensortrain(tci)
     ranks = TCI.rank(tci)

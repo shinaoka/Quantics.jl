@@ -1,3 +1,4 @@
+#===
 abstract type AbstractAdaptiveQTTNode end
 
 struct AdaptiveQTT{T<:Number,DIM} <: AbstractAdaptiveQTTNode
@@ -28,7 +29,6 @@ function Base.show(io::IO, obj::AdaptiveQTTInternalNode{T,DIM}) where {T,DIM}
     end
 end
 
-#===
 function construct_adaptiveqtt(::Type{T}, ::Val{DIM}, f::Function, R::Int; maxiter=100,
                                prefix=QuanticsInd[], kwargs...) where {T,DIM}
     localdim = 2^DIM
@@ -60,7 +60,6 @@ function construct_adaptiveqtt(::Type{T}, ::Val{DIM}, f::Function, R::Int; maxit
     end
     return AdaptiveQTTInternalNode{T,DIM}(children, prefix)
 end
-===#
 
 function asmps(qatt::AdaptiveQTT{T,DIM}, sites; kwargs...)::MPS where {T,DIM}
     lenprefix = length(qatt.prefix)
@@ -86,6 +85,7 @@ function asmps(qatt::AdaptiveQTTInternalNode{T,DIM}, sites; kwargs...)::MPS wher
 
     return M
 end
+===#
 
 
 """
