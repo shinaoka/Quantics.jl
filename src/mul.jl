@@ -149,7 +149,7 @@ end
 By default, elementwise multiplication will be performed.
 """
 function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
-                 tag_col::String="", kwargs...)
+                 tag_col::String="", alg="naive", kwargs...)
     sites_row = findallsiteinds_by_tag(siteinds(M1); tag=tag_row)
     sites_shared = findallsiteinds_by_tag(siteinds(M1); tag=tag_shared)
     sites_col = findallsiteinds_by_tag(siteinds(M2); tag=tag_col)
@@ -167,7 +167,17 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
     M1_, M2_ = preprocess(matmul, M1_, M2_)
     M1_, M2_ = preprocess(ewmul, M1_, M2_)
 
-    M = MSSTA.asMPO(contract(M1_, M2_; kwargs...))
+    @show M1_
+    @show M2_
+    if alg == "fit"
+        init = contract(M1_, M2_; alg="naive", kwargs...)
+        init = truncate(init; maxdim=1)
+        @show init
+        M = MSSTA.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
+        @show M
+    elseif alg == "naive"
+        M = MSSTA.asMPO(contract(M1_, M2_; alg="naive", kwargs...))
+    end
 
     M = MSSTA.postprocess(matmul, M)
     M = MSSTA.postprocess(ewmul, M)

@@ -3,6 +3,8 @@ module MSSTA
 using ITensors
 import ITensors
 import ITensors.NDTensors: Tensor, BlockSparseTensor, blockview
+using ITensorNetworks
+
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 using StaticArrays
@@ -22,5 +24,6 @@ include("fouriertransform.jl")
 include("imaginarytime.jl")
 include("transformer.jl")
 include("qtt.jl")
+include("patch.jl")
 
 end
