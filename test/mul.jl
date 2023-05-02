@@ -134,11 +134,9 @@ end
 
         sites_a = collect(Iterators.flatten(zip(sx, sy, sk)))
         sites_b = collect(Iterators.flatten(zip(sy, sz, sk)))
-        sites_c = collect(Iterators.flatten(zip(sx, sz, sk)))
 
         a = randomMPS(sites_a; linkdims=D)
         b = randomMPS(sites_b; linkdims=D)
-        init_c = randomMPS(sites_c; linkdims=D)
 
         # Reference data
         a_arr = _tomat3(a)
@@ -148,7 +146,7 @@ end
             ab_arr[:, :, k] .= a_arr[:, :, k] * b_arr[:, :, k]
         end
 
-        ab = MSSTA.automul(a, b; tag_row="x", tag_shared="y", tag_col="z", alg="fit", init=init_c)
+        ab = MSSTA.automul(a, b; tag_row="x", tag_shared="y", tag_col="z", alg="fit")
         ab_arr_reconst = _tomat3(ab)
         @test ab_arr ≈ ab_arr_reconst
     end
