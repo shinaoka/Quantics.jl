@@ -1,8 +1,8 @@
-using TensorCrossInterpolation
-import TensorCrossInterpolation: TensorCI, CachedFunction
-import TensorCrossInterpolation as TCI
+using .TensorCrossInterpolation
+import .TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
+import .TensorCrossInterpolation as TCI
 
-function TCItoMPS(tci::TensorCI{T}, sites=nothing) where {T}
+function TCItoMPS(tci::Union{TensorCI{T},TensorCI2{T}}, sites=nothing) where {T}
     tensors = TCI.tensortrain(tci)
     ranks = TCI.rank(tci)
     N = length(tensors)
@@ -11,7 +11,7 @@ function TCItoMPS(tci::TensorCI{T}, sites=nothing) where {T}
     if sites === nothing
         sites = [Index(localdims[n], "n=$n") for n in 1:N]
     else
-        all(localdims .== dim.(sites)) &&
+        all(localdims .== dim.(sites)) ||
             error("ranks are not consistent with dimension of sites")
     end
 
