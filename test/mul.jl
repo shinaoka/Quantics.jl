@@ -60,7 +60,7 @@ end
         @test flag
     end
 
-    @testset "matmul" begin
+    @testset "matmul"  for T in [Float64, ComplexF64]
         N = 3
         sitesx = [Index(2, "x=$n") for n in 1:N]
         sitesy = [Index(2, "y=$n") for n in 1:N]
@@ -69,8 +69,8 @@ end
 
         sites1 = collect(Iterators.flatten(zip(sitesx, sitesy)))
         sites2 = collect(Iterators.flatten(zip(sitesy, sitesz)))
-        M1 = MSSTA.asMPO(randomMPS(sites1))
-        M2 = MSSTA.asMPO(randomMPS(sites2))
+        M1 = MSSTA.asMPO(randomMPS(T, sites1))
+        M2 = MSSTA.asMPO(randomMPS(T, sites2))
 
         # preprocess
         M1, M2 = MSSTA.preprocess(mul, M1, M2)
@@ -94,13 +94,13 @@ end
         @test M_mat_ref ≈ M_mat_reconst
     end
 
-    @testset "elementwisemul" begin
+    @testset "elementwisemul" for T in [Float64, ComplexF64]
         N = 5
         sites = [Index(2, "n=$n") for n in 1:N]
         mul = MSSTA.ElementwiseMultiplier(sites)
 
-        M1_ = randomMPS(sites)
-        M2_ = randomMPS(sites)
+        M1_ = randomMPS(T, sites)
+        M2_ = randomMPS(T, sites)
         M1 = MSSTA.asMPO(M1_)
         M2 = MSSTA.asMPO(M2_)
 
@@ -121,7 +121,7 @@ end
         @test M_reconst ≈ M1_reconst .* M2_reconst
     end
 
-    @testset "batchedmatmul" begin
+    @testset "batchedmatmul" for T in [Float64, ComplexF64]
         """
         C(x, z, k) = sum_y A(x, y, k) * B(y, z, k)
         """
@@ -135,13 +135,13 @@ end
         sites_a = collect(Iterators.flatten(zip(sx, sy, sk)))
         sites_b = collect(Iterators.flatten(zip(sy, sz, sk)))
 
-        a = randomMPS(sites_a; linkdims=D)
-        b = randomMPS(sites_b; linkdims=D)
+        a = randomMPS(T, sites_a; linkdims=D)
+        b = randomMPS(T, sites_b; linkdims=D)
 
         # Reference data
         a_arr = _tomat3(a)
         b_arr = _tomat3(b)
-        ab_arr = zeros(Float64, 2^nbit, 2^nbit, 2^nbit)
+        ab_arr = zeros(T, 2^nbit, 2^nbit, 2^nbit)
         for k in 1:(2^nbit)
             ab_arr[:, :, k] .= a_arr[:, :, k] * b_arr[:, :, k]
         end

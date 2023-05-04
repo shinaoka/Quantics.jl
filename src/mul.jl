@@ -90,7 +90,7 @@ function _asdiagonal(t, site::Index{T}) where {T<:Number}
     end
     locs = [locs...] # From Vector{Any} to Vector{Tuple{Int,...}}
 
-    b = BlockSparseTensor(locs, block_inds...)
+    b = BlockSparseTensor(eltype(t), locs, block_inds)
     for i in 1:dim(site)
         if ndims(rawdata) == 2
             blockview(b, (1, i, i)) .= rawdata[:, i]
