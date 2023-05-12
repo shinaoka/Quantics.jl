@@ -25,5 +25,6 @@ include("imaginarytime.jl")
 include("transformer.jl")
 include("qtt.jl")
 include("patch.jl")
+include("mesh.jl")
 
 end
