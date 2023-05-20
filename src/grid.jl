@@ -3,7 +3,7 @@ abstract type Grid end
 
 # Convert an index on the grid to the coordinate in the original coordinate system
 function originalcoordinate(g::Grid, index::NTuple{N,Int}) where {N}
-    all(1 .<= index .<= 2^g.R) || throw(BoundsError(index, 1, 2^g.R))
+    all(1 .<= index .<= 2^g.R) || error("1 <= {index} <= 2^g.R")
     return (index .- 1) .* grid_step(g) .+ grid_min(g)
 end
 
