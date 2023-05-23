@@ -67,8 +67,9 @@ function construct_adaptiveqtt(::Type{T}, ::Val{DIM}, f::Function, R::Int; maxit
         return (idx .- 1) .* (0.5^R)
     end
 
-    tci, ranks, errors = cross_interpolate(CachedFunction{Vector{Int},T}(x -> f(_arg_conv(x))),
-                                           fill(localdim, R - lenprefix),
+    localdims = fill(localdim, R - lenprefix)
+    fc = TCI.CachedFunction{T}(x -> f(_arg_conv(x)), localdims)
+    tci, ranks, errors = crossinterpolate(T, fc, localdims,
                                            ones(Int, R - lenprefix);
                                            maxiter=maxiter,
                                            kwargs...)
