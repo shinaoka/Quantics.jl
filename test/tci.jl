@@ -1,7 +1,9 @@
 using Test
 
 using TensorCrossInterpolation
+import TensorCrossInterpolation as TCI
 using MSSTA
+import MSSTA: QuanticsInd, originalcoordinate, DiscretizedGrid
 using ITensors
 ITensors.disable_warn_order()
 using SparseIR: valueim, FermionicFreq
@@ -14,22 +16,32 @@ using SparseIR: valueim, FermionicFreq
         1 / (iv - ek(kx, ky))
     end
 
-    function f(xs, β)::ComplexF64
-        kxy = 2π .* xs
-        return gk(kxy[1], kxy[2], β)
+    R = 20
+    grid = MSSTA.DiscretizedGrid{2}(R, (0.0, 0.0), (2π, 2π))
+    localdims = fill(4, R)
+
+    β = 20.0
+    f = x -> gk(originalcoordinate(grid, QuanticsInd{2}.(x))..., β)
+    firstpivot = fill(4, R)
+    firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
+    absmaxval = abs(f(firstpivot))
+    tol = 1e-5
+    tree = MSSTA.construct_adaptiveqtt2(ComplexF64,
+        f,
+        localdims;
+        maxiter=70, tolerance=tol)
+    #@show tree
+
+    for _ in 1:10
+        pivot = rand(1:4, R)
+        isapprox(
+            MSSTA.evaluate(tree, pivot),
+            f(pivot),
+            atol=tol * absmaxval
+        )
     end
 
-    R = 8
-    N = 2^R
-    halfN = 2^(R - 1)
-    siteskx = [Index(2, "Qubit, kx=$n") for n in 1:R]
-    sitesky = [Index(2, "Qubit, kx=$n") for n in 1:R]
-    sitesk = [Index(4, "Quantics, k=$n") for n in 1:R]
-
-    β = 10.0
-    aqtt = MSSTA.construct_adaptiveqtt(ComplexF64, Val(2),
-                                       x -> f(x, β), R; maxiter=50, tolerance=1e-5)
-
+    #==
     M = MSSTA.asmps(aqtt, sitesk)
 
     truncate!(M; cutoff=1e-8)
@@ -51,6 +63,7 @@ using SparseIR: valueim, FermionicFreq
     data_ref = f_.(xvec[:, newaxis], xvec[newaxis, :])
 
     @test maximum(abs, data_ref .- data) < 1e-3 * maximum(abs, data_ref)
+    ==#
 end end
 
 nothing

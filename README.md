@@ -4,4 +4,4 @@
 
 ## Prerequisites
 * ITensors.jl
-* ITensorTDVP.jl
+* ITensorNetworks.jl

@@ -28,88 +28,143 @@ end
 
 abstract type AbstractAdaptiveQTTNode end
 
-struct AdaptiveQTT{T<:Number,DIM} <: AbstractAdaptiveQTTNode
-    f::Function
+struct AdaptiveQTTLeaf{T<:Number} <: AbstractAdaptiveQTTNode
     tci::TensorCI{T}
-    ranks::Vector{Int}
-    errors::Vector{Float64}
-    prefix::Vector{QuanticsInd}
+    prefix::Vector{Int}
 end
 
-function Base.show(io::IO, obj::AdaptiveQTT{T,DIM}) where {T,DIM}
+function Base.show(io::IO, obj::AdaptiveQTTLeaf{T}) where {T}
     prefix = convert.(Int, obj.prefix)
     println(io,
-            " "^length(obj.prefix) *
-            "AdaptiveQTT: prefix=$(prefix), rank=$(maximum(obj.ranks))")
+            "  "^length(prefix) * 
+            "Leaf $(prefix): rank=$(maximum(TCI.linkdims(obj.tci)))")
 end
 
-struct AdaptiveQTTInternalNode{T<:Number,DIM} <: AbstractAdaptiveQTTNode
-    children::Vector{AbstractAdaptiveQTTNode}
-    prefix::Vector{QuanticsInd}
-end
+struct AdaptiveQTTInternalNode{T<:Number} <: AbstractAdaptiveQTTNode
+    children::Dict{Int,AbstractAdaptiveQTTNode}
+    prefix::Vector{Int}
 
-function Base.show(io::IO, obj::AdaptiveQTTInternalNode{T,DIM}) where {T,DIM}
-    #prefix = convert.(Int, obj.prefix)
-    #println(io, " "^length(obj.prefix) * "AdaptiveQTTInternalNode: prefix=$(prefix)")
-    for c in obj.children
-        Base.show(io, c)
+    function AdaptiveQTTInternalNode{T}(children::Dict{Int,AbstractAdaptiveQTTNode}, prefix::Vector{Int}) where {T}
+        return new{T}(children, prefix)
     end
 end
 
-function construct_adaptiveqtt(::Type{T}, ::Val{DIM}, f::Function, R::Int; maxiter=100,
-                               prefix=QuanticsInd[], kwargs...) where {T,DIM}
-    localdim = 2^DIM
-    lenprefix = length(prefix)
+"""
+prefix is the common prefix of all children
+"""
+function AdaptiveQTTInternalNode{T}(children::Vector{AbstractAdaptiveQTTNode},
+                                    prefix::Vector{Int}) where {T}
+    d = Dict{Int,AbstractAdaptiveQTTNode}()
+    for child in children
+        d[child.prefix[end]] = child
+    end
+    return AdaptiveQTTInternalNode{T}(d, prefix)
+end
 
-    function _arg_conv(qs::Vector{Int})
-        qs_ = [vcat(prefix, QuanticsInd{DIM}.(qs))...]
-        idx = quantics_to_index(qs_)
-        return (idx .- 1) .* (0.5^R)
+function Base.show(io::IO, obj::AdaptiveQTTInternalNode{T}) where {T}
+    println(io,
+        "  "^length(obj.prefix) * 
+        "InternalNode $(obj.prefix) with $(length(obj.children)) children")
+    for (k, v) in obj.children
+        Base.show(io, v)
+    end
+end
+
+
+"""
+Evaluate the tree at given idx
+"""
+function evaluate(obj::AdaptiveQTTInternalNode{T}, idx::AbstractVector{Int})::T where {T}
+    child_key = idx[length(obj.prefix) + 1]
+    return evaluate(obj.children[child_key], idx)
+end
+
+function evaluate(obj::AdaptiveQTTLeaf{T}, idx::AbstractVector{Int})::T where {T}
+    return TCI.evaluate(obj.tci, idx[length(obj.prefix) + 1:end])
+end
+
+"""
+Convert a dictionary of patches to a tree
+"""
+function _to_tree(patches::Dict{Vector{Int},TensorCI{T}}; nprefix=0)::AbstractAdaptiveQTTNode where {T}
+    length(unique(k[1:nprefix] for (k, v) in patches)) == 1 || error("Inconsistent prefixes")
+
+    common_prefix = first(patches)[1][1:nprefix]
+
+    # Return a leaf
+    if nprefix == length(first(patches)[1])
+        return AdaptiveQTTLeaf{T}(first(patches)[2], common_prefix)
     end
 
-    localdims = fill(localdim, R - lenprefix)
-    fc = TCI.CachedFunction{T}(x -> f(_arg_conv(x)), localdims)
-    tci, ranks, errors = crossinterpolate(T, fc, localdims,
-                                           ones(Int, R - lenprefix);
-                                           maxiter=maxiter,
-                                           kwargs...)
-
-    if maximum(ranks) < maxiter ÷ 2
-        return AdaptiveQTT{T,DIM}(f, tci, Vector{Int}(ranks), Vector{Float64}(errors),
-                                  prefix)
+    subgroups = Dict{Int, Dict{Vector{Int},TensorCI{T}}}()
+    
+    # Look at the first index after nprefix skips
+    # and group the patches by that index
+    for (k, v) in patches
+        idx = k[nprefix + 1]
+        if idx in keys(subgroups)
+            subgroups[idx][k] = v
+        else
+            subgroups[idx] = Dict{Vector{Int},TensorCI{T}}(k=>v)
+        end
     end
 
-    # If the rank is too large
+    # Recursively construct the tree
     children = AbstractAdaptiveQTTNode[]
-    for ic in 1:localdim
-        c = construct_adaptiveqtt(T, Val(DIM), f, R; maxiter=maxiter,
-                                  prefix=vcat(prefix, QuanticsInd{DIM}(ic)), kwargs...)
-        push!(children, c)
+    for (_, grp) in subgroups
+        push!(children, _to_tree(grp; nprefix=nprefix+1))
     end
-    return AdaptiveQTTInternalNode{T,DIM}(children, prefix)
+
+    return AdaptiveQTTInternalNode{T}(children, common_prefix)
 end
 
-function asmps(qatt::AdaptiveQTT{T,DIM}, sites; kwargs...)::MPS where {T,DIM}
-    lenprefix = length(qatt.prefix)
-    M = TCItoMPS(qatt.tci)
-    replace_siteinds!(M, sites[(lenprefix + 1):end])
 
-    if lenprefix == 0
-        return M
+"""
+Construct QTTs using adaptive partitioning of the domain.
+
+TODO
+* Use crossinterpolate2
+* Allow arbitrary order of partitioning
+* Parallelization
+"""
+function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int}; maxiter=100, firstpivot=ones(Int, length(localdims)), kwargs...)::AdaptiveQTTInternalNode{T} where T
+    R = length(localdims)
+    leaves = Dict{Vector{Int},TensorCI{T}}()
+
+    # Add root node
+    firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
+    tci, ranks, errors = crossinterpolate(T, f, localdims,
+                       firstpivot;
+                       maxiter=maxiter,
+                       kwargs...)
+    leaves[[]] = tci
+
+    while true
+        done = true
+        for (prefix, tci) in leaves
+            if maximum(TCI.linkdims(tci)) >= maxiter ÷ 2
+                done = false
+                delete!(leaves, prefix)
+                for ic in 1:localdims[length(prefix)+1]
+                    prefix_ = vcat(prefix, ic)
+                    localdims_ = localdims[length(prefix_)+1:end]
+                    f_ = x -> f(vcat(prefix_, x))
+                    firstpivot_ = ones(Int, R - length(prefix_))
+                    firstpivot_ = TCI.optfirstpivot(f_, localdims_, firstpivot_)
+                    t_, ranks_, errors_ = crossinterpolate(T,
+                                       f_,
+                                       localdims_,
+                                       firstpivot_;
+                                       maxiter=maxiter,
+                                       kwargs...)
+                    leaves[prefix_] = t_
+                end
+            end
+        end
+        if done
+            break
+        end
     end
 
-    M_prefix = directprod(T, sites[1:lenprefix], convert.(Int, qatt.prefix))
-    res = _directprod(M_prefix, M)
-    return res
-end
-
-function asmps(qatt::AdaptiveQTTInternalNode{T,DIM}, sites; kwargs...)::MPS where {T,DIM}
-    children = MPS[asmps(c, sites) for c in qatt.children]
-    M = children[1]
-    for c in 2:length(children)
-        M += children[c]
-        truncate!(M; kwargs...)
-    end
-
-    return M
+    return _to_tree(leaves)
 end
