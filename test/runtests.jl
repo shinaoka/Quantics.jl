@@ -1,5 +1,4 @@
 using Test
-using MSSTA
 
 @testset "MSSTA.jl" begin
     include("util.jl")
@@ -12,4 +11,7 @@ using MSSTA
     include("qtt.jl")
     include("transformer.jl")
     include("grid.jl")
+    include("tci.jl")
 end
+
+nothing

@@ -1,7 +1,3 @@
-using .TensorCrossInterpolation
-import .TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
-import .TensorCrossInterpolation as TCI
-
 function TCItoMPS(tci::Union{TensorCI{T},TensorCI2{T}}, sites=nothing) where {T}
     tensors = TCI.tensortrain(tci)
     ranks = TCI.rank(tci)
@@ -129,7 +125,7 @@ TODO
 """
 function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int}; maxiter=100, firstpivot=ones(Int, length(localdims)), kwargs...)::AdaptiveQTTInternalNode{T} where T
     R = length(localdims)
-    leaves = Dict{Vector{Int},TensorCI{T}}()
+    leaves = Dict{Vector{Int},Union{TensorCI{T},Future}}()
 
     # Add root node
     firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
@@ -142,7 +138,12 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
     while true
         done = true
         for (prefix, tci) in leaves
-            if maximum(TCI.linkdims(tci)) >= maxiter ÷ 2
+            if tci isa Future
+                done = false
+                if isready(tci)
+                    leaves[prefix] = fetch(tci)[1]
+                end
+            elseif maximum(TCI.linkdims(tci)) >= maxiter ÷ 2
                 done = false
                 delete!(leaves, prefix)
                 for ic in 1:localdims[length(prefix)+1]
@@ -151,13 +152,12 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
                     f_ = x -> f(vcat(prefix_, x))
                     firstpivot_ = ones(Int, R - length(prefix_))
                     firstpivot_ = TCI.optfirstpivot(f_, localdims_, firstpivot_)
-                    t_, ranks_, errors_ = crossinterpolate(T,
+                    leaves[prefix_] = @spawnat :any crossinterpolate(T,
                                        f_,
                                        localdims_,
                                        firstpivot_;
                                        maxiter=maxiter,
                                        kwargs...)
-                    leaves[prefix_] = t_
                 end
             end
         end
@@ -166,5 +166,13 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
         end
     end
 
-    return _to_tree(leaves)
+    leaves_done = Dict{Vector{Int},TensorCI{T}}()
+    for (k, v) in leaves
+        if v isa Future
+            error("Something got wrong. Not all leaves are fetched")
+        end
+        leaves_done[k] = v
+    end
+
+    return _to_tree(leaves_done)
 end

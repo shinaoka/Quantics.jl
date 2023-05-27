@@ -1,12 +1,20 @@
+using Distributed
+
 using Test
 
-using TensorCrossInterpolation
-import TensorCrossInterpolation as TCI
-using MSSTA
-import MSSTA: QuanticsInd, originalcoordinate, DiscretizedGrid
-using ITensors
-ITensors.disable_warn_order()
-using SparseIR: valueim, FermionicFreq
+# Define the maximum number of worker processes.
+const MAX_WORKERS = 4
+
+# Add worker processes if necessary.
+addprocs(max(0, MAX_WORKERS - nworkers()))
+
+@everywhere import MSSTA: QuanticsInd, originalcoordinate, DiscretizedGrid, construct_adaptiveqtt2
+@everywhere using TensorCrossInterpolation
+@everywhere import TensorCrossInterpolation as TCI
+@everywhere using MSSTA
+@everywhere using ITensors
+@everywhere ITensors.disable_warn_order()
+@everywhere using SparseIR: valueim, FermionicFreq
 
 @testset "tci.jl" begin @testset "2D fermi gk" begin
     ek(kx, ky) = 2 * cos(kx) + 2 * cos(ky) - 1.0

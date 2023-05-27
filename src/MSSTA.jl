@@ -1,4 +1,14 @@
+#__precompile__(false) 
+
 module MSSTA
+
+using Distributed
+
+#@everywhere begin
+    #using Pkg
+    #Pkg.activate(".")
+    #Pkg.instantiate()
+#end
 
 using ITensors
 import ITensors
@@ -8,10 +18,13 @@ using ITensorNetworks
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 using StaticArrays
-import Requires: @require
+
+using TensorCrossInterpolation
+import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
+import TensorCrossInterpolation as TCI
+
 
 function __init__()
-    @require TensorCrossInterpolation = "b261b2ec-6378-4871-b32e-9173bb050604" include("tci.jl")
 end
 
 include("mpsedge.jl")
@@ -26,5 +39,6 @@ include("transformer.jl")
 include("qtt.jl")
 include("patch.jl")
 include("grid.jl")
+include("tci.jl")
 
 end
