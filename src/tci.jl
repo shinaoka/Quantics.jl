@@ -25,7 +25,7 @@ end
 abstract type AbstractAdaptiveQTTNode end
 
 struct AdaptiveQTTLeaf{T<:Number} <: AbstractAdaptiveQTTNode
-    tci::TensorCI{T}
+    tci::TensorCI2{T}
     prefix::Vector{Int}
 end
 
@@ -82,7 +82,7 @@ end
 """
 Convert a dictionary of patches to a tree
 """
-function _to_tree(patches::Dict{Vector{Int},TensorCI{T}}; nprefix=0)::AbstractAdaptiveQTTNode where {T}
+function _to_tree(patches::Dict{Vector{Int},TensorCI2{T}}; nprefix=0)::AbstractAdaptiveQTTNode where {T}
     length(unique(k[1:nprefix] for (k, v) in patches)) == 1 || error("Inconsistent prefixes")
 
     common_prefix = first(patches)[1][1:nprefix]
@@ -92,7 +92,7 @@ function _to_tree(patches::Dict{Vector{Int},TensorCI{T}}; nprefix=0)::AbstractAd
         return AdaptiveQTTLeaf{T}(first(patches)[2], common_prefix)
     end
 
-    subgroups = Dict{Int, Dict{Vector{Int},TensorCI{T}}}()
+    subgroups = Dict{Int, Dict{Vector{Int},TensorCI2{T}}}()
     
     # Look at the first index after nprefix skips
     # and group the patches by that index
@@ -101,7 +101,7 @@ function _to_tree(patches::Dict{Vector{Int},TensorCI{T}}; nprefix=0)::AbstractAd
         if idx in keys(subgroups)
             subgroups[idx][k] = v
         else
-            subgroups[idx] = Dict{Vector{Int},TensorCI{T}}(k=>v)
+            subgroups[idx] = Dict{Vector{Int},TensorCI2{T}}(k=>v)
         end
     end
 
@@ -123,16 +123,19 @@ TODO
 * Allow arbitrary order of partitioning
 * Parallelization
 """
-function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int}; maxiter=100, firstpivot=ones(Int, length(localdims)), sleep_time::Float64=1e-2, verbosity::Int=0, kwargs...)::Union{AdaptiveQTTLeaf{T},AdaptiveQTTInternalNode{T}} where T
+function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int};
+    tolerance::Float64=1e-8, maxbonddim::Int=100,
+    firstpivot=ones(Int, length(localdims)),
+    sleep_time::Float64=1e-2, verbosity::Int=0, kwargs...)::Union{AdaptiveQTTLeaf{T},AdaptiveQTTInternalNode{T}} where T
+
     R = length(localdims)
-    leaves = Dict{Vector{Int},Union{TensorCI{T},Future}}()
+    leaves = Dict{Vector{Int},Union{TensorCI2{T},Future}}()
 
     # Add root node
     firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
-    tci, ranks, errors = crossinterpolate(T, f, localdims,
-                       firstpivot;
-                       maxiter=maxiter,
-                       kwargs...)
+    tci, ranks, errors = TCI.crossinterpolate2(T, f, localdims,
+                       [firstpivot];
+                       tolerance=tolerance, verbosity=verbosity, kwargs...)
     leaves[[]] = tci
 
     while true
@@ -148,7 +151,7 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
                     leaves[prefix] = fetch(tci)[1]
                     #println("done", prefix)
                 end
-            elseif maximum(TCI.linkdims(tci)) >= maxiter ÷ 2
+            elseif maximum(TCI.linkdims(tci)) >= maxbonddim
                 done = false
                 delete!(leaves, prefix)
                 for ic in 1:localdims[length(prefix)+1]
@@ -160,11 +163,11 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
                     if verbosity > 0
                         println("Interpolating $(prefix_) ...")
                     end
-                    leaves[prefix_] = @spawnat :any crossinterpolate(T,
+                    leaves[prefix_] = @spawnat :any TCI.crossinterpolate2(T,
                                        f_,
                                        localdims_,
-                                       firstpivot_;
-                                       maxiter=maxiter,
+                                       [firstpivot_];
+                                        tolerance=tolerance, verbosity=verbosity,
                                        kwargs...)
                 end
             end
@@ -174,7 +177,7 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
         end
     end
 
-    leaves_done = Dict{Vector{Int},TensorCI{T}}()
+    leaves_done = Dict{Vector{Int},TensorCI2{T}}()
     for (k, v) in leaves
         if v isa Future
             error("Something got wrong. Not all leaves are fetched")
