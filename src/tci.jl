@@ -123,7 +123,7 @@ TODO
 * Allow arbitrary order of partitioning
 * Parallelization
 """
-function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int}; maxiter=100, firstpivot=ones(Int, length(localdims)), kwargs...)::AdaptiveQTTInternalNode{T} where T
+function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int}; maxiter=100, firstpivot=ones(Int, length(localdims)), sleep_time::Float64=1e-2, verbosity::Int=0, kwargs...)::Union{AdaptiveQTTLeaf{T},AdaptiveQTTInternalNode{T}} where T
     R = length(localdims)
     leaves = Dict{Vector{Int},Union{TensorCI{T},Future}}()
 
@@ -136,12 +136,17 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
     leaves[[]] = tci
 
     while true
+        sleep(sleep_time) # Not to run the loop too quickly
         done = true
         for (prefix, tci) in leaves
             if tci isa Future
                 done = false
                 if isready(tci)
+                    if verbosity > 0
+                        println("Fetching $(prefix) ...")
+                    end
                     leaves[prefix] = fetch(tci)[1]
+                    #println("done", prefix)
                 end
             elseif maximum(TCI.linkdims(tci)) >= maxiter ÷ 2
                 done = false
@@ -152,6 +157,9 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
                     f_ = x -> f(vcat(prefix_, x))
                     firstpivot_ = ones(Int, R - length(prefix_))
                     firstpivot_ = TCI.optfirstpivot(f_, localdims_, firstpivot_)
+                    if verbosity > 0
+                        println("Interpolating $(prefix_) ...")
+                    end
                     leaves[prefix_] = @spawnat :any crossinterpolate(T,
                                        f_,
                                        localdims_,
