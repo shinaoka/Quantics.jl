@@ -1,7 +1,6 @@
 using Test
 
 @testset "MSSTA.jl" begin
-    #==
     include("util.jl")
     include("quantics.jl")
     include("binaryop.jl")
@@ -12,7 +11,6 @@ using Test
     include("qtt.jl")
     include("transformer.jl")
     include("grid.jl")
-    ==#
     include("tci.jl")
 end
 

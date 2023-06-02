@@ -8,7 +8,7 @@ const MAX_WORKERS = 4
 # Add worker processes if necessary.
 addprocs(max(0, MAX_WORKERS - nworkers()))
 
-@everywhere import MSSTA: QuanticsInd, originalcoordinate, DiscretizedGrid, construct_adaptiveqtt2
+@everywhere import MSSTA: QuanticsInd, originalcoordinate, DiscretizedGrid, adaptivetci
 @everywhere using TensorCrossInterpolation
 @everywhere import TensorCrossInterpolation as TCI
 @everywhere using MSSTA
@@ -34,10 +34,10 @@ addprocs(max(0, MAX_WORKERS - nworkers()))
     firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
     absmaxval = abs(f(firstpivot))
     tol = 1e-5
-    tree = MSSTA.construct_adaptiveqtt2(ComplexF64,
+    tree = MSSTA.adaptivetci(ComplexF64,
         f,
         localdims;
-        maxiter=70, tolerance=tol)
+        maxbonddim=35, tolerance=tol)
     #@show tree
 
     for _ in 1:10

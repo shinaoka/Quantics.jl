@@ -22,25 +22,25 @@ function TCItoMPS(tci::Union{TensorCI{T},TensorCI2{T}}, sites=nothing) where {T}
     return MPS(tensors_)
 end
 
-abstract type AbstractAdaptiveQTTNode end
+abstract type AbstractAdaptiveTCINode end
 
-struct AdaptiveQTTLeaf{T<:Number} <: AbstractAdaptiveQTTNode
+struct AdaptiveTCILeaf{T<:Number} <: AbstractAdaptiveTCINode
     tci::TensorCI2{T}
     prefix::Vector{Int}
 end
 
-function Base.show(io::IO, obj::AdaptiveQTTLeaf{T}) where {T}
+function Base.show(io::IO, obj::AdaptiveTCILeaf{T}) where {T}
     prefix = convert.(Int, obj.prefix)
     println(io,
             "  "^length(prefix) * 
             "Leaf $(prefix): rank=$(maximum(TCI.linkdims(obj.tci)))")
 end
 
-struct AdaptiveQTTInternalNode{T<:Number} <: AbstractAdaptiveQTTNode
-    children::Dict{Int,AbstractAdaptiveQTTNode}
+struct AdaptiveTCIInternalNode{T<:Number} <: AbstractAdaptiveTCINode
+    children::Dict{Int,AbstractAdaptiveTCINode}
     prefix::Vector{Int}
 
-    function AdaptiveQTTInternalNode{T}(children::Dict{Int,AbstractAdaptiveQTTNode}, prefix::Vector{Int}) where {T}
+    function AdaptiveTCIInternalNode{T}(children::Dict{Int,AbstractAdaptiveTCINode}, prefix::Vector{Int}) where {T}
         return new{T}(children, prefix)
     end
 end
@@ -48,16 +48,16 @@ end
 """
 prefix is the common prefix of all children
 """
-function AdaptiveQTTInternalNode{T}(children::Vector{AbstractAdaptiveQTTNode},
+function AdaptiveTCIInternalNode{T}(children::Vector{AbstractAdaptiveTCINode},
                                     prefix::Vector{Int}) where {T}
-    d = Dict{Int,AbstractAdaptiveQTTNode}()
+    d = Dict{Int,AbstractAdaptiveTCINode}()
     for child in children
         d[child.prefix[end]] = child
     end
-    return AdaptiveQTTInternalNode{T}(d, prefix)
+    return AdaptiveTCIInternalNode{T}(d, prefix)
 end
 
-function Base.show(io::IO, obj::AdaptiveQTTInternalNode{T}) where {T}
+function Base.show(io::IO, obj::AdaptiveTCIInternalNode{T}) where {T}
     println(io,
         "  "^length(obj.prefix) * 
         "InternalNode $(obj.prefix) with $(length(obj.children)) children")
@@ -70,26 +70,26 @@ end
 """
 Evaluate the tree at given idx
 """
-function evaluate(obj::AdaptiveQTTInternalNode{T}, idx::AbstractVector{Int})::T where {T}
+function evaluate(obj::AdaptiveTCIInternalNode{T}, idx::AbstractVector{Int})::T where {T}
     child_key = idx[length(obj.prefix) + 1]
     return evaluate(obj.children[child_key], idx)
 end
 
-function evaluate(obj::AdaptiveQTTLeaf{T}, idx::AbstractVector{Int})::T where {T}
+function evaluate(obj::AdaptiveTCILeaf{T}, idx::AbstractVector{Int})::T where {T}
     return TCI.evaluate(obj.tci, idx[length(obj.prefix) + 1:end])
 end
 
 """
 Convert a dictionary of patches to a tree
 """
-function _to_tree(patches::Dict{Vector{Int},TensorCI2{T}}; nprefix=0)::AbstractAdaptiveQTTNode where {T}
+function _to_tree(patches::Dict{Vector{Int},TensorCI2{T}}; nprefix=0)::AbstractAdaptiveTCINode where {T}
     length(unique(k[1:nprefix] for (k, v) in patches)) == 1 || error("Inconsistent prefixes")
 
     common_prefix = first(patches)[1][1:nprefix]
 
     # Return a leaf
     if nprefix == length(first(patches)[1])
-        return AdaptiveQTTLeaf{T}(first(patches)[2], common_prefix)
+        return AdaptiveTCILeaf{T}(first(patches)[2], common_prefix)
     end
 
     subgroups = Dict{Int, Dict{Vector{Int},TensorCI2{T}}}()
@@ -106,12 +106,12 @@ function _to_tree(patches::Dict{Vector{Int},TensorCI2{T}}; nprefix=0)::AbstractA
     end
 
     # Recursively construct the tree
-    children = AbstractAdaptiveQTTNode[]
+    children = AbstractAdaptiveTCINode[]
     for (_, grp) in subgroups
         push!(children, _to_tree(grp; nprefix=nprefix+1))
     end
 
-    return AdaptiveQTTInternalNode{T}(children, common_prefix)
+    return AdaptiveTCIInternalNode{T}(children, common_prefix)
 end
 
 
@@ -123,10 +123,11 @@ TODO
 * Allow arbitrary order of partitioning
 * Parallelization
 """
-function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVector{Int};
+function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
     tolerance::Float64=1e-8, maxbonddim::Int=100,
     firstpivot=ones(Int, length(localdims)),
-    sleep_time::Float64=1e-2, verbosity::Int=0, kwargs...)::Union{AdaptiveQTTLeaf{T},AdaptiveQTTInternalNode{T}} where T
+    sleep_time::Float64=1e-2, verbosity::Int=0, maxnleaves=100,
+    kwargs...)::Union{AdaptiveTCILeaf{T},AdaptiveTCIInternalNode{T}} where T
 
     R = length(localdims)
     leaves = Dict{Vector{Int},Union{TensorCI2{T},Future}}()
@@ -135,23 +136,52 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
     firstpivot = TCI.optfirstpivot(f, localdims, firstpivot)
     tci, ranks, errors = TCI.crossinterpolate2(T, f, localdims,
                        [firstpivot];
-                       tolerance=tolerance, verbosity=verbosity, kwargs...)
+                       tolerance=tolerance,
+                       maxbonddim=maxbonddim,
+                       verbosity=verbosity,
+                       kwargs...)
     leaves[[]] = tci
+    maxsamplevalue = tci.maxsamplevalue
 
     while true
+        @show length(leaves), maxsamplevalue
+        #if length(leaves) > 30
+            #break
+        #end
         sleep(sleep_time) # Not to run the loop too quickly
+
+        #maxsamplevalue = max(
+            #maxsamplevalue,
+            #maximum(tci.maxsamplevalue for tci in values(leaves) if tci isa TensorCI2)
+        #)
         done = true
         for (prefix, tci) in leaves
             if tci isa Future
                 done = false
                 if isready(tci)
-                    if verbosity > 0
-                        println("Fetching $(prefix) ...")
+                    #if verbosity > 0
+                        #println("Fetching $(prefix) ...")
+                    #end
+                    res = 
+                    try
+                        fetch(tci)
+                    catch ex
+                        error("An exception occured: $ex")
                     end
-                    leaves[prefix] = fetch(tci)[1]
-                    #println("done", prefix)
+                    if res isa RemoteException
+                        error("An exception occured: $(res)")
+                    end
+                    tci = leaves[prefix] = res[1]
+                    if verbosity > 0
+                        println("Fetched, bond dimension = $(maximum(TCI.linkdims(leaves[prefix]))) $(TCI.maxbonderror(tci)) $(tci.maxsamplevalue) for $(prefix)")
+                    end
+                    maxsamplevalue = max(maxsamplevalue, leaves[prefix].maxsamplevalue)
                 end
-            elseif maximum(TCI.linkdims(tci)) >= maxbonddim
+            end
+            if tci isa TensorCI2 && (
+                    maximum(TCI.linkdims(tci)) >= maxbonddim ||
+                    TCI.maxbonderror(tci) > tolerance * maxsamplevalue
+                ) && length(leaves) < maxnleaves
                 done = false
                 delete!(leaves, prefix)
                 for ic in 1:localdims[length(prefix)+1]
@@ -167,7 +197,10 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
                                        f_,
                                        localdims_,
                                        [firstpivot_];
-                                        tolerance=tolerance, verbosity=verbosity,
+                                       tolerance=tolerance * maxsamplevalue,
+                                       maxbonddim=maxbonddim,
+                                       verbosity=verbosity,
+                                       normalizeerror=false,
                                        kwargs...)
                 end
             end
@@ -176,11 +209,15 @@ function construct_adaptiveqtt2(::Type{T}, f::Function, localdims::AbstractVecto
             break
         end
     end
+    @show length(leaves)
 
     leaves_done = Dict{Vector{Int},TensorCI2{T}}()
     for (k, v) in leaves
         if v isa Future
             error("Something got wrong. Not all leaves are fetched")
+        end
+        if TCI.maxbonderror(v) > tolerance * maxsamplevalue
+            error("TCI for k= $(k) has bond error $(TCI.maxbonderror(v)) larger than $(tolerance) * $(maxsamplevalue) = $(tolerance*maxsamplevalue)!")
         end
         leaves_done[k] = v
     end
