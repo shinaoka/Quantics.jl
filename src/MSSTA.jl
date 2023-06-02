@@ -18,6 +18,7 @@ using ITensorNetworks
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 using StaticArrays
+using Memoize
 
 using TensorCrossInterpolation
 import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
@@ -40,5 +41,6 @@ include("qtt.jl")
 include("patch.jl")
 include("grid.jl")
 include("tci.jl")
+include("cubature.jl")
 
 end

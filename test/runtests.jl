@@ -12,6 +12,7 @@ using Test
     include("transformer.jl")
     include("grid.jl")
     include("tci.jl")
+    include("cubature.jl")
 end
 
 nothing

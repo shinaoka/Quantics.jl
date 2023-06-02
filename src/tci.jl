@@ -29,6 +29,10 @@ struct AdaptiveTCILeaf{T<:Number} <: AbstractAdaptiveTCINode
     prefix::Vector{Int}
 end
 
+function Base.sum(tci::AdaptiveTCILeaf{T})::T where {T}
+    return sum(TCI.tensortrain(tci.tci))
+end
+
 function Base.show(io::IO, obj::AdaptiveTCILeaf{T}) where {T}
     prefix = convert.(Int, obj.prefix)
     println(io,
@@ -44,6 +48,49 @@ struct AdaptiveTCIInternalNode{T<:Number} <: AbstractAdaptiveTCINode
         return new{T}(children, prefix)
     end
 end
+
+function Base.sum(tci::AdaptiveTCIInternalNode{T})::T where {T}
+    return sum((sum(child) for child in values(tci.children)))
+end
+
+#==
+Base.length(node::AdaptiveTCIInternalNode) = length(node.children)
+
+struct NodeIterator{T <: Number}
+    stack::Vector{Tuple{AdaptiveTCIInternalNode{T}, Int}}  # Stack to store the nodes for DFS
+end
+
+function Base.iterate(it::NodeIterator{T}, state = (it.stack, 1)) where {T}
+    stack, _ = state
+    if isempty(stack)
+        return nothing  # No more elements
+    end
+    node, index = stack[end]
+    if index > length(node.children)
+        pop!(stack)  # Finished with the current node
+        return Base.iterate(it, (stack, 1))
+    end
+    child = node.children[index]
+    stack[end] = (node, index + 1)  # Move to next child
+    if child isa AdaptiveTCILeaf
+        # Return the leaf
+        return child, (stack, 1)
+    else
+        # Push the internal node to the stack and start at its first child
+        push!(stack, (child, 1))
+        return Base.iterate(it, (stack, 1))
+    end
+end
+
+function Base.iterate(node::AdaptiveTCIInternalNode{T}) where {T}
+    return Base.iterate(NodeIterator{T}([(node, 1)]))
+end
+
+function Base.iterate(node::AdaptiveTCIInternalNode{T}, state::Tuple{Vector{Tuple{AdaptiveTCIInternalNode{T}, Int}}, Int}) where {T}
+    return Base.iterate(NodeIterator{T}(state[1]), state)
+end
+===#
+
 
 """
 prefix is the common prefix of all children
@@ -126,7 +173,7 @@ TODO
 function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
     tolerance::Float64=1e-8, maxbonddim::Int=100,
     firstpivot=ones(Int, length(localdims)),
-    sleep_time::Float64=1e-2, verbosity::Int=0, maxnleaves=100,
+    sleep_time::Float64=1e-6, verbosity::Int=0, maxnleaves=100,
     kwargs...)::Union{AdaptiveTCILeaf{T},AdaptiveTCIInternalNode{T}} where T
 
     R = length(localdims)
@@ -144,7 +191,6 @@ function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
     maxsamplevalue = tci.maxsamplevalue
 
     while true
-        @show length(leaves), maxsamplevalue
         #if length(leaves) > 30
             #break
         #end
@@ -209,7 +255,6 @@ function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
             break
         end
     end
-    @show length(leaves)
 
     leaves_done = Dict{Vector{Int},TensorCI2{T}}()
     for (k, v) in leaves
