@@ -243,6 +243,7 @@ end
 Decompose a tensor into a set of indices by QR
 """
 function split_tensor(tensor::ITensor, inds_list::Vector{Vector{Index{T}}}) where {T}
+    inds_list = copy(inds_list)
     result = ITensor[]
     for (i, inds) in enumerate(inds_list)
         if i == length(inds_list)
@@ -250,6 +251,9 @@ function split_tensor(tensor::ITensor, inds_list::Vector{Vector{Index{T}}}) wher
         else
             Q, R, _ = qr(tensor, inds)
             push!(result, Q)
+            if i < length(inds_list)
+                push!(inds_list[i+1], commonind(Q, R))
+            end
             tensor = R
         end
     end

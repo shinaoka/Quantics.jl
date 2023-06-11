@@ -74,6 +74,17 @@ using ITensors
         @test tensor ≈ reduce(*, tensors)
     end
 
+    @testset "split_tensor2" begin
+        nsite = 8
+        sites = [Index(2, "Qubit, site=$n") for n in 1:nsite]
+        tensor = randomITensor(sites)
+        tensors = MSSTA.split_tensor(tensor, [sites[1:3], sites[4:5], sites[6:8]])
+        @test length(inds(tensors[1])) == 4
+        @test length(inds(tensors[2])) == 4
+        @test length(inds(tensors[3])) == 4
+        @test tensor ≈ reduce(*, tensors)
+    end
+
     @testset "matchsiteinds_mps" begin
         N = 2
         physdim = 2

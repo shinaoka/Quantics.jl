@@ -223,9 +223,7 @@ function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
                     end
                     maxsamplevalue = max(maxsamplevalue, leaves[prefix].maxsamplevalue)
                 end
-            end
-            if tci isa TensorCI2 && (
-                    maximum(TCI.linkdims(tci)) >= maxbonddim ||
+            elseif tci isa TensorCI2 && (
                     TCI.maxbonderror(tci) > tolerance * maxsamplevalue
                 ) && length(leaves) < maxnleaves
                 done = false
@@ -234,8 +232,19 @@ function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
                     prefix_ = vcat(prefix, ic)
                     localdims_ = localdims[length(prefix_)+1:end]
                     f_ = x -> f(vcat(prefix_, x))
+
                     firstpivot_ = ones(Int, R - length(prefix_))
-                    firstpivot_ = TCI.optfirstpivot(f_, localdims_, firstpivot_)
+                    maxval = abs(f_(firstpivot_))
+
+                    for r in 1:10
+                        firstpivot_rnd = [rand(1:localdims_[r]) for r in eachindex(localdims_)]
+                        firstpivot_rnd = TCI.optfirstpivot(f_, localdims_, firstpivot_rnd)
+                        if abs(f_(firstpivot_rnd)) > maxval
+                            firstpivot_ = firstpivot_rnd
+                            maxval = abs(f_(firstpivot_))
+                        end
+                    end
+
                     if verbosity > 0
                         println("Interpolating $(prefix_) ...")
                     end

@@ -7,6 +7,7 @@ function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
     abs(a) <= 1 || error("a must be either 0, 1, -1")
     abs(b) <= 1 || error("b must be either 0, 1, -1")
     abs(bc) == 1 || error("bc must be either 1, -1")
+    a + b != -2 || error("a = -1 and b = -1 not supported")
 
     cins = cin_on ? [-1, 0, 1] : [0]
     cinsize = length(cins)
@@ -30,11 +31,14 @@ function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
     return ITensor(tensor, [link_in, link_out, site_x, site_y, site_out]), link_in, link_out
 end
 
+"""
+Create a tensor acting on a vector of sites.
+"""
 function binaryop_tensor_multisite(sites::Vector{Index{T}},
                                    coeffs::Vector{Tuple{Int,Int}},
                                    pos_sites_in::Vector{Tuple{Int,Int}},
-                                   cin_on,
-                                   cout_on,
+                                   cin_on::Bool,
+                                   cout_on::Bool,
                                    bc::Vector{Int}) where {T<:Number}
 
     # Check
@@ -48,15 +52,31 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
     links_in = Index{T}[]
     links_out = Index{T}[]
 
+    # First, we need to know the number of dummny indices for each site.
+    ndumnyinds = zeros(Int, nsites)
+    for n in 1:nsites
+        for s in pos_sites_in[n]
+            ndumnyinds[s] += 1
+        end
+    end
+
     res = ITensor(1)
     for n in 1:nsites
-        res *= delta(sites[n], [setprime(sites_in[n], plev) for plev in 1:nsites])
+        res *= delta(sites[n], [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]])
     end
+
+    currentdummyinds = ones(Int, nsites)
     for n in 1:nsites
-        sites_ab = sites_in[pos_sites_in[n][1]], sites_in[pos_sites_in[n][2]]
-        sites_ab = setprime(sites_ab, n)
-        t, lin, lout = _binaryop_tensor(coeffs[n]..., sites_ab..., sites[n]', cin_on,
-                                        cout_on, bc[n])
+        sites_ab =
+            setprime(sites_in[pos_sites_in[n][1]], currentdummyinds[pos_sites_in[n][1]]),
+            setprime(sites_in[pos_sites_in[n][2]], currentdummyinds[pos_sites_in[n][2]])
+        for i in 1:2
+            currentdummyinds[pos_sites_in[n][i]] += 1
+        end
+        #sites_ab = setprime(sites_ab, n)
+        t, lin, lout = _binaryop_tensor(
+            coeffs[n]..., sites_ab..., sites[n]',
+            cin_on, cout_on, bc[n])
         push!(links_in, lin)
         push!(links_out, lout)
         res *= t
@@ -84,6 +104,7 @@ x = (x_1 ... x_R)_2, y = (y_1 ... y_R)_2.
 We now define a new function by binary operations as
 f(x, y) = g(a * x + b * y, c * x + d * y),
 where a, b, c, d = +/- 1, 0.
+Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
 
 The transform from `g` to `f` can be represented as an MPO:
 f(x_1, y_1, ..., x_R, y_R) = M(x_1, y_1, ...; x'_1, y'_1, ...) f(x'_1, y'_1, ..., x'_R, y'_R).
@@ -138,6 +159,11 @@ function binaryop_mpo(sites::Vector{Index{T}},
         end
         push!(inds_list, [lright, sites_[nsites_bop]', sites_[nsites_bop]])
 
+        #@show inds(tensor)
+        #@show inds_list
+        #for t in split_tensor(tensor, inds_list)
+            #@show inds(t)
+        #end
         tensors = vcat(tensors, split_tensor(tensor, inds_list))
     end
 
