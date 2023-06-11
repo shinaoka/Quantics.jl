@@ -42,6 +42,11 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     return M
 end
 
+"""
+f(x) = g(1 - x) = M * g(x) for x = 0, 1, ..., 2^R-1.
+
+Note that x = 0, 1, 2, ..., 2^R-1 is mapped to x = 0, 2^R-1, 2^R-2, ..., 1.
+"""
 function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
     sites = siteinds(M)
     targetsites = sites
@@ -50,6 +55,25 @@ function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
     end
 
     transformer = matchsiteinds(flipop(targetsites; rev_carrydirec=true, bc=bc), sites)
+
+    return apply(transformer, M; kwargs...)
+end
+
+"""
+f(x) = g(x + shift) for x = 0, 1, ..., 2^R-1 and 0 <= shift < 2^R.
+"""
+function shiftaxis(M::MPS, shift::Int; tag="", bc::Int=1, kwargs...)
+    sites = siteinds(M)
+    targetsites = sites
+    if tag != ""
+        targetsites = findallsiteinds_by_tag(sites; tag=tag)
+    end
+
+    R = length(targetsites)
+    nbc, shift_mod = divrem(shift, 2^R, RoundDown)
+
+    transformer = matchsiteinds(shift_mpo(targetsites, shift_mod, bc), sites)
+    transformer *= bc ^ nbc
 
     return apply(transformer, M; kwargs...)
 end

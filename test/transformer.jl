@@ -138,6 +138,50 @@ using LinearAlgebra
             @assert LinearAlgebra.diagm(M_reconst) ≈ Mnew_reconst
         end
     end
+
+    @testset "shiftaxis" for R in [3], bc in [1, -1]
+        sites = [Index(2, "Qubit, x=$n") for n in 1:R]
+        g = randomMPS(sites)
+
+        for shift in [0, 1, 2, 2^R-1]
+            f = MSSTA.shiftaxis(g, shift, bc=bc)
+
+            f_vec = vec(Array(reduce(*, f), reverse(sites)))
+            g_vec = vec(Array(reduce(*, g), reverse(sites)))
+
+            f_vec_ref = similar(f_vec)
+            for i in 1:2^R
+                ishifted = mod1(i + shift, 2^R)
+                sign = ishifted == i + shift ? 1 : bc
+                f_vec_ref[i] = g_vec[ishifted] * sign
+            end
+
+            @test f_vec_ref ≈ f_vec
+        end
+    end
+
+    @testset "shiftaxis2d" for R in [3], bc in [1, -1]
+        sitesx = [Index(2, "Qubit, x=$n") for n in 1:R]
+        sitesy = [Index(2, "Qubit, y=$n") for n in 1:R]
+        sites = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        g = randomMPS(sites)
+
+        for shift in [-4^R+1, -1, 0, 1, 2^R-1, 2^R, 2^R+1, 4^R+1]
+            f = MSSTA.shiftaxis(g, shift, tag="x", bc=bc)
+
+            f_mat = reshape(Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy))), 2^R, 2^R)
+            g_mat = reshape(Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy))), 2^R, 2^R)
+
+            f_mat_ref = similar(f_mat)
+            for i in 1:2^R
+                nbc, ishifted = divrem(i + shift - 1, 2^R, RoundDown)
+                ishifted += 1
+                f_mat_ref[i, :] = g_mat[ishifted, :] * (bc ^ nbc)
+            end
+
+            @test f_mat_ref ≈ f_mat
+        end
+    end
 end
 
 nothing

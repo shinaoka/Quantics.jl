@@ -174,3 +174,45 @@ function binaryop_mpo(sites::Vector{Index{T}},
 
     return M
 end
+
+
+"""
+For given function `g(x)` and shift `s`, construct an MPO representing `f(x) = g(x + s)`.
+x: 0, ..., 2^R - 1
+0 <= s <= 2^R - 1
+
+We assume that left site indices correspond to significant digits
+"""
+function shift_mpo(sites::Vector{Index{T}}, shift::Int, bc::Int=1) where {T<:Number}
+    R = length(sites)
+    0 <= shift <= 2^R-1 || error("Invalid shift")
+
+    ys = MSSTA.tobin(shift, R)
+
+    links = Index{T}[]
+    tensors = ITensor[]
+
+    for n in 1:R
+        cin_on = n != R
+        cout_on = n != 1
+        sitey = Index(2, "Qubit, y")
+        t, link_in, link_out = MSSTA._binaryop_tensor(1, 1, sites[n]', sitey, sites[n], cin_on, cout_on, bc)
+        t *= onehot(sitey => ys[n]+1)
+        if n < R
+            push!(links, Index(dim(link_in), "link=$n"))
+            replaceind!(t, link_in => links[end])
+        end
+        if n > 1
+            replaceind!(t, link_out => links[n-1])
+        end
+        if n == 1
+            t *= onehot(link_out => 1)
+        elseif n == R
+            t *= onehot(link_in => 1)
+        end
+
+        push!(tensors, t)
+    end
+
+    MPO(tensors)
+end
