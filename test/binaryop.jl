@@ -4,7 +4,6 @@ ITensors.disable_warn_order()
 using MSSTA
 
 @testset "binaryop.jl" begin
-    #==
     @testset "_binaryop" for rev_carrydirec in [true, false], nbit in 2:3
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
         # x' = a * x + b * y
@@ -142,7 +141,6 @@ using MSSTA
             @test g_vec_ref ≈ g_vec
         end
     end
-    ==#
 
     @testset "shiftop" for R in [3], bc in [1, -1]
         sites = [Index(2, "Qubit, x=$n") for n in 1:R]
