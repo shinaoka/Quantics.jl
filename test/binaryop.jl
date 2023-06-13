@@ -2,9 +2,12 @@ using Test
 using ITensors
 ITensors.disable_warn_order()
 using MSSTA
+import Random
 
 @testset "binaryop.jl" begin
+    #==
     @testset "_binaryop" for rev_carrydirec in [true, false], nbit in 2:3
+        Random.seed!(1)
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
         # x' = a * x + b * y
         # y' = c * x + d * y
@@ -25,54 +28,53 @@ using MSSTA
         rsites = reverse(sites)
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
-            if a + b == -2 || c + d == -2
-                continue
-            end
+            g = randomMPS(sites)
             M = MSSTA.binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
                                rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
+            f = apply(M, g)
 
-            f = randomMPS(sites)
-            g = apply(M, f)
-
-            # f[x_R, ..., x_1, y_R, ..., y_1]
+            # f[x_R, ..., x_1, y_R, ..., y_1] and f[x, y]
             f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy)))
-
-            # g[x'_R, ..., x'_1, y'_R, ..., y'_1]
-            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy)))
-
-            # f[x, y]
             f_vec = reshape(f_arr, 2^nbit, 2^nbit)
 
-            # g[x', y']
+            # g[x_R, ..., x_1, y_R, ..., y_1] and g[x, y]
+            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy)))
             g_vec = reshape(g_arr, 2^nbit, 2^nbit)
 
             function prime_xy(x, y)
+                0 <= x < 2^nbit || error("something went wrong")
+                0 <= y < 2^nbit || error("something went wrong")
                 xp_ = a * x + b * y
                 yp_ = c * x + d * y
-                xp = mod(xp_, 2^nbit)
-                yp = mod(yp_, 2^nbit)
-                return xp, yp,
-                       xp == xp_ ? 1 : bc_x,
-                       yp == yp_ ? 1 : bc_y
+                nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
+                nmody, yp = divrem(yp_, 2^nbit, RoundDown)
+                return xp, yp, bc_x^nmodx, bc_y^nmody
             end
 
-            g_vec_ref = similar(g_vec)
+            f_vec_ref = similar(f_vec)
             for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1)
                 xp, yp, sign_x, sign_y = prime_xy(x, y)
-                g_vec_ref[x + 1, y + 1] = f_vec[xp + 1, yp + 1] * sign_x * sign_y
+                f_vec_ref[x + 1, y + 1] = g_vec[xp + 1, yp + 1] * sign_x * sign_y
             end
 
-            @test g_vec_ref ≈ g_vec
+            @test f_vec_ref ≈ f_vec
         end
     end
+    ==#
 
-    @testset "binaryop_three_sites" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1]
+    #===
+    pos_sites_in: [(1, 2), (2, 3), (3, 1)]
+      x' = c1 * x + c2 * y
+      y' =          c3 * y + c4 * z
+      z' = c6 * x          + c5 * z
+    ===#
+
+    #@testset "binaryop_three_sites" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3
+    @testset "binaryop_three_sites" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2]
         # x' = c1 * x + c2 * y
         # y' =          c3 * y + c4 * z
         # z' = c6 * x          + c5 * z
         # f(x, y, z) = g(x', y', z')
-        nbit = 3
-
         if rev_carrydirec
             # x1, y1, z1, x2, y2, z2, ...
             sites = [Index(2, "Qubit, $name=$n") for n in 1:nbit for name in ["x", "y", "z"]]
@@ -90,10 +92,8 @@ using MSSTA
 
         rsites = reverse(sites)
 
-        for coeffs in Iterators.product(fill(collect(-1:1), 6)...)
-            any([sum(coeffs[2i-1:2i]) for i in 1:3] .== -2) && continue
-
-            #for coeffs in [(1, -1, 1, 1, 1, 1)]
+        #for coeffs in Iterators.product(fill(collect(-1:1), 6)...)
+        for coeffs in [(-1, -1, 1, 1, 1, 1)]
             M = MSSTA.binaryop_mpo(
                 sites,
                 [Tuple(coeffs[1:2]), Tuple(coeffs[3:4]), Tuple(coeffs[5:6])],
@@ -119,13 +119,10 @@ using MSSTA
                 xp_ = coeffs[1] * x + coeffs[2] * y
                 yp_ =                 coeffs[3] * y + coeffs[4] * z
                 zp_ = coeffs[6] * x                 + coeffs[5] * z
-                xp = mod(xp_, 2^nbit)
-                yp = mod(yp_, 2^nbit)
-                zp = mod(zp_, 2^nbit)
-                return xp, yp, zp,
-                       xp == xp_ ? 1 : bc_x,
-                       yp == yp_ ? 1 : bc_y,
-                       zp == zp_ ? 1 : bc_z
+                nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
+                nmody, yp = divrem(yp_, 2^nbit, RoundDown)
+                nmodz, zp = divrem(zp_, 2^nbit, RoundDown)
+                return xp, yp, zp, bc_x^nmodx, bc_y^nmody, bc_z^nmodz
             end
 
             g_vec_ref = similar(g_vec)

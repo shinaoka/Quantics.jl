@@ -90,6 +90,31 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
 end
 
 """
+Compute boundary conditions for `f` from those for `g`.
+"""
+#==
+function _compute_bc_for_f(
+    coeffs::Vector{Tuple{Int,Int}},
+    pos_sites_in::Vector{Tuple{Int,Int}},
+    bc_g::Vector{Int})::Vector{Int}
+
+    N = length(coeffs)
+    bc_f = ones(Int, N)
+    for idx_f in 1:N
+        for idx_g in 1:N
+            for p in 1:2
+                if idx_f == pos_sites_in[idx_g][p] && coeffs[idx_g][p] != 0
+                    bc_f[idx_f] *= bc_g[idx_g]
+                end
+            end
+        end
+    end
+
+    return bc_f
+end
+==#
+
+"""
 Construct an MPO representing a selector associated with binary operations.
 
 We describe the functionality for length(coeffs) = 2 (nsites_bop).
@@ -102,9 +127,10 @@ Assumed rev_carrydirec = true, we consider a two-variable g(x, y), which is quan
 x = (x_1 ... x_R)_2, y = (y_1 ... y_R)_2.
 
 We now define a new function by binary operations as
-f(x, y) = g(a * x + b * y, c * x + d * y),
-where a, b, c, d = +/- 1, 0.
-Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
+f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2),
+where a, b, c, d = +/- 1, 0, and s1, s1 are arbitrary integers.
+
+Let us first explain the case of s1, s2 = 0 (no shift).
 
 The transform from `g` to `f` can be represented as an MPO:
 f(x_1, y_1, ..., x_R, y_R) = M(x_1, y_1, ...; x'_1, y'_1, ...) f(x'_1, y'_1, ..., x'_R, y'_R).
@@ -113,8 +139,73 @@ The MPO `M` acts a selector: The MPO selects values from `f` to form `g`.
 
 For rev_carrydirec = false, the returned MPO represents
 f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ..., x'_1, y'_1).
+
+`bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
+function binaryop_mpo_shift(sites::Vector{Index{T}},
+    coeffs::Vector{Tuple{Int,Int}},
+    pos_sites_in::Vector{Tuple{Int,Int}},
+    shift::Vector{Tuple{Int,Int}};
+    rev_carrydirec=false,
+    bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+
+    # Number of variables involved in transformation
+    nsites_bop = length(coeffs)
+
+    length(pos_sites_in) == nsites_bop || error("Length of pos_sites_in does not match that of coeffs")
+    length(shift) == nsites_bop || error("Length of shift does not match that of coeffs")
+
+    # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
+    #         = h(a * x + b * y,      c * x + d * y),
+    # where h(x, y) = g(x + s1, y + s2).
+    # The transformation is taken place in this order: g -> h -> f.
+
+    # g -> h
+    #M_g_to_h = shift_mpo(sites, shift, rev_carrydirec=rev_carrydirec, bc=bc[i])
+
+    # h -> f
+    M_h_to_f = binaryop_mpo(sites, coeffs, pos_sites_in, rev_carrydirec=rev_carrydirec, bc=bc)
+end
+
 function binaryop_mpo(sites::Vector{Index{T}},
+                      coeffs::Vector{Tuple{Int,Int}},
+                      pos_sites_in::Vector{Tuple{Int,Int}};
+                      rev_carrydirec=false,
+                      bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+    # Number of variables involved in transformation
+    nsites_bop = length(coeffs)
+
+    if bc === nothing
+        bc = ones(Int64, nsites_bop) # Default: periodic boundary condition
+    end
+
+    # First check transformations with -1 and -1; e.g., (a, b) = (-1, -1)
+    # These transformations are not supported in the backend.
+    # To support them, we need to flip the sign of coeffs as follows:
+    #  f(x, y) = h(x + y, c * x + d * y) = g(-x-y, c * x + d * y),
+    # where h(x, y) = g(-x, y).
+    # The transformation is taken place in this order: g -> h -> f.
+    sign_flips = [coeffs[n][1] == -1 && coeffs[n][2] == -1 for n in 1:length(coeffs)]
+    coeffs_ = [(sign_flips[i] ? abs.(coeffs[i]) : coeffs[i]) for i in eachindex(coeffs)]
+
+    # For g->h
+    M = _binaryop_mpo(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec, bc=bc)
+
+    # For h->f
+    for i in 1:nsites_bop
+        if !sign_flips[i]
+            continue
+        end
+        M_ = bc[i] * flipop(sites[i:nsites_bop:end], rev_carrydirec=rev_carrydirec, bc=bc[i])
+        M = apply(M, matchsiteinds(M_, sites), alg="naive", cutoff=1e-25)
+    end
+
+    return M
+end
+
+
+# Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
+function _binaryop_mpo(sites::Vector{Index{T}},
                       coeffs::Vector{Tuple{Int,Int}},
                       pos_sites_in::Vector{Tuple{Int,Int}};
                       rev_carrydirec=false,
@@ -183,7 +274,7 @@ x: 0, ..., 2^R - 1
 
 We assume that left site indices correspond to significant digits
 """
-function shift_mpo(sites::Vector{Index{T}}, shift::Int, bc::Int=1) where {T<:Number}
+function shift_mpo(sites::Vector{Index{T}}, shift::Int; rev_carrydirec=false, bc::Int=1) where {T<:Number}
     R = length(sites)
     0 <= shift <= 2^R-1 || error("Invalid shift")
 

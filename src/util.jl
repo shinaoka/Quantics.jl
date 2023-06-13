@@ -25,9 +25,9 @@ function replace_mpo_siteinds!(M::MPO, sites_src, sites_dst)
 end
 
 """
-Reverse the order of the physical indices of an MPS/MPO
+Reverse the order of the MPS/MPO tensors
+The order of the siteinds are reversed in the returned object.
 """
-#function _reverse(M::MPS) = typeof(M)([M[n] for n in reverse(1:length(M))])
 function _reverse(M::MPO)
     sites = extractsites(M)
     N = length(M)

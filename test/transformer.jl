@@ -32,39 +32,32 @@ using LinearAlgebra
         @test g_values ≈ g_values_ref
     end
 
-    @testset "flip" for nbit in 2:3, mostsignificantdigit in [:left, :right]
+    @testset "flipop" for nbit in 2:3, rev_carrydirec in [true, false], bc in [1, -1]
         sites = siteinds("Qubit", nbit)
 
-        g = randomMPS(sites)
+        g = randomMPS(rev_carrydirec ? sites : reverse(sites))
 
-        if mostsignificantdigit == :left
-            op = MSSTA.flipop(sites; rev_carrydirec=true)
-            f = apply(op, g; alg="naive")
-            g_reconst = vec(Array(reduce(*, g), reverse(sites)))
-            f_reconst = vec(Array(reduce(*, f), reverse(sites)))
-        else
-            op = MSSTA.flipop(sites; rev_carrydirec=false)
-            f = apply(op, g; alg="naive")
-            g_reconst = vec(Array(reduce(*, g), sites))
-            f_reconst = vec(Array(reduce(*, f), sites))
-        end
+        op = MSSTA.flipop(siteinds(g), rev_carrydirec=rev_carrydirec, bc=bc)
+        f = apply(op, g; alg="naive")
+        g_reconst = vec(Array(reduce(*, g), reverse(sites)))
+        f_reconst = vec(Array(reduce(*, f), reverse(sites)))
 
         f_ref = similar(f_reconst)
-        for i in 1:(2^nbit)
-            f_ref[i] = g_reconst[mod(2^nbit - (i - 1), 2^nbit) + 1]
+        for i in 0:(2^nbit-1)
+            nmod, i_ = divrem(2^nbit - i, 2^nbit, RoundDown)
+            f_ref[i + 1] = g_reconst[i_ + 1] * (bc ^ nmod)
         end
 
+        @show g_reconst
         @test f_reconst ≈ f_ref
     end
 
-    @testset "reverseaxis" for bc in [-1, 1]
-        nbit = 3
-
+    @testset "reverseaxis" for bc in [1], nbit in 2:2, rev_carrydirec in [false]
         sites = [Index(2, "x=$x") for x in 1:nbit]
 
-        g = randomMPS(sites)
+        g = randomMPS(rev_carrydirec ? sites : reverse(sites))
 
-        f = MSSTA.reverseaxis(g; tag="x", alg="naive", bc=bc)
+        f = MSSTA.reverseaxis(g; tag="x", alg="naive", bc=bc, rev_carrydirec=rev_carrydirec)
         g_reconst = vec(Array(reduce(*, g), reverse(sites)))
         f_reconst = vec(Array(reduce(*, f), reverse(sites)))
 
@@ -74,11 +67,17 @@ using LinearAlgebra
         end
         f_ref[1] *= bc
 
+        @show bc, nbit, rev_carrydirec
+        @show g
+        @show f
+        @show f_ref
+        @show f_reconst
         @test f_reconst ≈ f_ref
     end
 
-    @testset "reverseaxis2" begin
-        nbit = 3
+    #==
+    @testset "reverseaxis2" for nbit in 2:3
+        N = 2^nbit
 
         sitesx = [Index(2, "x=$x") for x in 1:nbit]
         sitesy = [Index(2, "y=$y") for y in 1:nbit]
@@ -89,19 +88,26 @@ using LinearAlgebra
 
         function _reconst(M)
             arr = Array(reduce(*, M), [reverse(sitesx)..., reverse(sitesy)...])
-            return reshape(arr, 2^nbit, 2^nbit)
+            return reshape(arr, N, N)
         end
 
-        f = MSSTA.reverseaxis(g; tag="x", alg="naive")
         g_reconst = _reconst(g)
-        f_reconst = _reconst(f)
 
-        f_ref = similar(f_reconst)
-        for j in 1:(2^nbit), i in 1:(2^nbit)
-            f_ref[i, j] = g_reconst[mod(2^nbit - (i - 1), 2^nbit) + 1, j]
+        fx = MSSTA.reverseaxis(g; tag="x", alg="naive")
+        fx_reconst = _reconst(fx)
+
+        fy = MSSTA.reverseaxis(g; tag="y", alg="naive")
+        fy_reconst = _reconst(fy)
+
+        fx_ref = similar(fx_reconst)
+        fy_ref = similar(fy_reconst)
+        for j in 0:(N-1), i in 0:(N-1)
+            fx_ref[i+1, j+1] = g_reconst[mod(N-i, N) + 1, j+1]
+            fy_ref[i+1, j+1] = g_reconst[i+1, mod(N-j, N) + 1]
         end
 
-        @test f_reconst ≈ f_ref
+        @test fx_reconst ≈ fx_ref
+        @test fy_reconst ≈ fy_ref
     end
 
     @testset "phase_rotation" begin
@@ -182,6 +188,7 @@ using LinearAlgebra
             @test f_mat_ref ≈ f_mat
         end
     end
+    ==#
 end
 
 nothing

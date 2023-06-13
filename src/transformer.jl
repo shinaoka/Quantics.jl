@@ -14,9 +14,25 @@ function _single_tensor_flip()
 end
 
 """
-f(x) = g(1 - x) = M * g(x)
+This function returns an MPO, M, representing the transformation
+   f(x) = g(-x)
+where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
+"""
+function flipop_to_negativedomain(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO where {T}
+    return flipop(sites; rev_carrydirec=rev_carrydirec, bc=bc) * bc
+end
+
+"""
+This function returns an MPO, M, representing the transformation
+   f(x) = g(2^R-x)
+where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 """
 function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO where {T}
+    if rev_carrydirec
+        M = flipop(reverse(sites), rev_carrydirec=false, bc=bc)
+        return MPO([M[n] for n in reverse(1:length(M))])
+    end
+
     N = length(sites)
     abs(bc) == 1 || error("bc must be either 1, -1")
     N > 1 || error("MPO with one tensor is not supported")
@@ -33,28 +49,26 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     bc_tensor = ITensor([1.0, bc], links[end])
     M[N] = M[N] * bc_tensor
 
-    if rev_carrydirec
-        M = _reverse(M)
-    end
-
     cleanup_linkinds!(M)
 
     return M
 end
 
-"""
-f(x) = g(1 - x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 
-Note that x = 0, 1, 2, ..., 2^R-1 is mapped to x = 0, 2^R-1, 2^R-2, ..., 1.
 """
-function reverseaxis(M::MPS; tag="", bc::Int=1, kwargs...)
+f(x) = g(N - x) = M * g(x) for x = 0, 1, ..., N-1,
+where x = 0, 1, ..., N-1 and N = 2^R.
+
+Note that x = 0, 1, 2, ..., N-1 are mapped to x = 0, N-1, N-2, ..., 1 mod N.
+"""
+function reverseaxis(M::MPS; rev_carrydirec=false, tag="", bc::Int=1, kwargs...)
     sites = siteinds(M)
     targetsites = sites
     if tag != ""
         targetsites = findallsiteinds_by_tag(sites; tag=tag)
     end
 
-    transformer = matchsiteinds(flipop(targetsites; rev_carrydirec=true, bc=bc), sites)
+    transformer = matchsiteinds(flipop(targetsites; rev_carrydirec=rev_carrydirec, bc=bc), sites)
 
     return apply(transformer, M; kwargs...)
 end
