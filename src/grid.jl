@@ -1,22 +1,37 @@
 
 abstract type Grid end
 
-# Convert an index on the grid to the coordinate in the original coordinate system
-function originalcoordinate(g::Grid, index::NTuple{N,Int}) where {N}
+"""
+Convert a grid index to the corresponding coordinate in the original coordinate system
+"""
+function grididx_to_origcoord(g::Grid, index::NTuple{N,Int}) where {N}
     all(1 .<= index .<= 2^g.R) || error("1 <= {index} <= 2^g.R")
     return (index .- 1) .* grid_step(g) .+ grid_min(g)
 end
 
+# Backward compatibility
+originalcoordinate(g::Grid, index::NTuple{N,Int}) where {N} = grididx_to_origcoord(g, index)
 
-# Convert an index on the grid to quantices indices
-function to_quantics(g::Grid, gridpoint::NTuple{N,Int}) where {N}
-    return index_to_quantics(gridpoint, g.R)
+
+"""
+Convert an grid index to quantices indices
+"""
+grididx_to_quantics(g::Grid, grididx::NTuple{N,Int}) where {N} = index_to_quantics(grididx, g.R)
+
+
+# Backward compatibility
+to_quantics(g::Grid, grididx::NTuple{N,Int}) where {N} = grididx_to_quantics(g, grididx)
+
+
+"""
+Convert quantics indices to the original coordinate system
+"""
+function quantics_to_origcoord(g::Grid, index::AbstractVector{QuanticsInd{N}}) where {N}
+    return grididx_to_origcoord(g, quantics_to_index(index))
 end
 
-# Convert quantics indices to the original coordinate system
-function originalcoordinate(g::Grid, index::AbstractVector{QuanticsInd{N}}) where {N}
-    return originalcoordinate(g, quantics_to_index(index))
-end
+# Backward compatibility
+originalcoordinate(g::Grid, index::AbstractVector{QuanticsInd{N}}) where {N} = quantics_to_origcoord(g, index)
 
 
 @doc raw"""
@@ -36,15 +51,22 @@ grid_min(grid::InherentDiscreteGrid) = grid.origin
 grid_step(grid::InherentDiscreteGrid{N}) where {N} = ntuple(i -> 1, N)
 
 
-# Create a grid for inherently discrete data 
+"""
+Create a grid for inherently discrete data 
+"""
 function InherentDiscreteGrid{N}(R::Int) where {N}
     return InherentDiscreteGrid{N}(R, ntuple(i -> 1, N))
 end
 
-# Convert a coordinate in the original coordinate system to the index on the grid
-function gridpoint(g::InherentDiscreteGrid, coordinate::NTuple{N,Int}) where {N}
+"""
+Convert a coordinate in the original coordinate system to the corresponding grid index
+"""
+function origcoord_to_grididx(g::InherentDiscreteGrid, coordinate::NTuple{N,Int}) where {N}
     return coordinate .- grid_min(g) .+ 1
 end
+
+# Backward compatibility
+gridpoint(g::InherentDiscreteGrid, coordinate::NTuple{N,Int}) where {N} = origcoord_to_grididx(g, coordinate)
 
 @doc raw"""
 The DiscretizedGrid struct represents a grid for discretized continuous data.
@@ -62,15 +84,23 @@ end
 grid_min(g::DiscretizedGrid) = g.grid_min
 grid_step(g::DiscretizedGrid) = (g.grid_max .- g.grid_min) ./ (2^g.R)
 
-# Create a grid for discretized data 
+"""
+Create a discrete grid for continuous data
+"""
 function DiscretizedGrid{N}(R::Int) where {N}
     return DiscretizedGrid{N}(R, ntuple(i -> 0.0, N), ntuple(i -> 1.0, N))
 end
 
-# Convert a coordinate in the original coordinate system to the index on the grid
-function gridpoint(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
+"""
+Convert a coordinate in the original coordinate system to the corresponding grid index
+"""
+function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
     all(grid_min(g) .<= coordinate .< g.grid_max) || throw(BoundsError(coordinate, grid_min(g), grid_max(g)))
     return ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int
 end
 
+origcoord_to_grididx(g::DiscretizedGrid{1}, coordinate::Float64) = origcoord_to_grididx(g, (coordinate,))[1]
+
+# Backward compatibility
+gridpoint(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N} = origcoord_to_grididx(g, coordinate)
 gridpoint(g::DiscretizedGrid{1}, coordinate::Float64) = gridpoint(g, (coordinate,))[1]

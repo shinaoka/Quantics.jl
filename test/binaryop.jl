@@ -62,10 +62,6 @@ using MSSTA
                 g_vec_ref[x + 1, y + 1] = f_vec[xp + 1, yp + 1] * sign_x * sign_y
             end
 
-            if ! (g_vec_ref ≈ g_vec)
-                @show a, b, c, d, bc_x, bc_y
-                exit()
-            end
             @test g_vec_ref ≈ g_vec
         end
     end
