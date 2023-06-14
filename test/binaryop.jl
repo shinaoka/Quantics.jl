@@ -144,7 +144,7 @@ import Random
     @testset "affinetransform_three_vars" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3, affmat in affinetransform_testsets
     #@testset "affinetransform_three_var" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2], affmat in affinetransform_testsets
         Random.seed!(1234)
-        varnames = ["x", "y", "z"]
+        varnames = ["x", "y", "z", "K"] # "K" is not involved in transform
 
         # Read coefficient matrix
         coeffs_dic = Dict{String,Int}[]
@@ -173,11 +173,10 @@ import Random
 
         if rev_carrydirec
             # x1, y1, z1, x2, y2, z2, ...
-            sites = [Index(2, "Qubit, $name=$n") for n in 1:nbit for name in ["x", "y", "z"]]
+            sites = [Index(2, "Qubit, $name=$n") for n in 1:nbit for name in varnames]
         else
             # xR, yR, zR, xR-1, yR-1, zR-1...
-            sites = [Index(2, "Qubit, $name=$n") for n in reverse(1:nbit)
-                     for name in ["x", "y", "z"]]
+            sites = [Index(2, "Qubit, $name=$n") for n in reverse(1:nbit) for name in varnames]
         end
         # x1, x2, ...
         sitesx = [sites[findfirst(x -> hastags(x, "x=$n"), sites)] for n in 1:nbit]
@@ -185,22 +184,24 @@ import Random
         sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
         # z1, z2, ...
         sitesz = [sites[findfirst(x -> hastags(x, "z=$n"), sites)] for n in 1:nbit]
+        # K1, K2, ...
+        sitesK = [sites[findfirst(x -> hastags(x, "K=$n"), sites)] for n in 1:nbit]
 
         shift = rand(-2*2^nbit:2*2^nbit, 3)
 
         g = randomMPS(sites)
         f = MSSTA.affinetransform(
-            g, varnames,
+            g, ["x", "y", "z"],
             coeffs_dic,
             shift, [bc_x, bc_y, bc_z], cutoff=1e-25)
 
         # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1] and f[x, y, z]
-        f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-        f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit)
+        f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz), reverse(sitesK)))
+        f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit, 2^nbit)
 
         # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1] and g[x', y', z']
-        g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-        g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit)
+        g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz), reverse(sitesK)))
+        g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit, 2^nbit)
 
         function prime_xy(x, y, z)
             xp_, yp_, zp_ = affmat * [x, y, z] .+ shift
@@ -213,7 +214,7 @@ import Random
         f_vec_ref = similar(f_vec)
         for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
             xp, yp, zp, sign_x, sign_y, sign_z = prime_xy(x, y, z)
-            f_vec_ref[x + 1, y + 1, z + 1] = g_vec[xp + 1, yp + 1, zp + 1] * sign_x * sign_y * sign_z
+            f_vec_ref[x + 1, y + 1, z + 1, :] .= g_vec[xp + 1, yp + 1, zp + 1, :] * sign_x * sign_y * sign_z
         end
 
         @test f_vec_ref ≈ f_vec
