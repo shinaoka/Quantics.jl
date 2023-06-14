@@ -26,6 +26,8 @@ end
 This function returns an MPO, M, representing the transformation
    f(x) = g(2^R-x)
 where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
+
+`sites`: the sites of the output MPS
 """
 function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO where {T}
     if rev_carrydirec
@@ -70,8 +72,8 @@ function reverseaxis(M::MPS; tag="x", bc::Int=1, kwargs...)
     !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
     rev_carrydirec = isascendingorder(pos) 
     siteinds_MPO = rev_carrydirec ? targetsites : reverse(targetsites)
-    transformer = matchsiteinds(flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc), sites)
-
+    transformer_tag = flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc)
+    transformer = matchsiteinds(transformer_tag, sites)
     return apply(transformer, M; kwargs...)
 end
 

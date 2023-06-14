@@ -1,5 +1,17 @@
 """
-a * x + b * y, where a = 0/+/-1 and b = 0/+1/-1.
+  a * x + b * y, where a = 0/+/-1 and b = 0/+1/-1 but a + b != -2.
+
+         out
+          |
+       --------
+ cin --|  T   |-- cout
+       --------
+        |    |
+        x    y
+
+  T_{x, y, out, cin, cout} = 1 if a * x + b * y + cin = cout
+                           = 0 otherwise
+  `out`` is the output bit.
 """
 function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
                           site_out::Index{T},
@@ -73,7 +85,6 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
         for i in 1:2
             currentdummyinds[pos_sites_in[n][i]] += 1
         end
-        #sites_ab = setprime(sites_ab, n)
         t, lin, lout = _binaryop_tensor(
             coeffs[n]..., sites_ab..., sites[n]',
             cin_on, cout_on, bc[n])
@@ -200,13 +211,28 @@ function affinetransform(
 
     # Below, we assume rev_carrydirec = true (left significant bits are at the left end) 
 
+    # First check transformations with -1 and -1; e.g., (a, b) = (-1, -1)
+    # These transformations are not supported in the backend.
+    # To support this case, we need to flip the sign of coeffs as follows:
+    #  f(x, y) = h(x + y, c * x + d * y) = g(- x -y, c * x + d * y),
+    # where h(x, y) = g(-x, y).
+    # The transformation is taken place in this order: g -> h -> f.
+    sign_flips = [coeffs[n][1] == -1 && coeffs[n][2] == -1 for n in eachindex(coeffs)]
+
+    for v in 1:ntransvars
+        if sign_flips[v]
+            M = bc[v] * reverseaxis(M; tag=tags[v], bc=bc[v], kwargs...)
+        end
+    end
+
+    # Apply binary operations (nomore (-1, -1) coefficients)
+    coeffs_positive = [(sign_flips[n] ? abs.(coeffs[n]) : coeffs[n]) for n in eachindex(coeffs)]
     sites_mpo = collect(Iterators.flatten(Iterators.zip(sites_for_tags...)))
-    transformer = _binaryop_mpo(sites_mpo, coeffs, pos_sites_in, rev_carrydirec=rev_carrydirec, bc=bc)
-
-    # Match siteinds
+    transformer = _binaryop_mpo(sites_mpo, coeffs_positive, pos_sites_in, rev_carrydirec=true, bc=bc)
     transformer = matchsiteinds(transformer, sites)
+    M = apply(transformer, M; kwargs...)
 
-    return apply(transformer, M; kwargs...)
+    return M
 end
 
 """

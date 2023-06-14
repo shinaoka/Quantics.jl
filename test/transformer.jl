@@ -106,6 +106,52 @@ using LinearAlgebra
         @test fy_reconst ≈ fy_ref
     end
 
+    #@testset "reverseaxis3" for nbit in 2:3, rev_carrydirec in [true, false]
+    @testset "reverseaxis3" for nbit in [2], rev_carrydirec in [true]
+        N = 2^nbit
+
+        sitesx = [Index(2, "x=$x") for x in 1:nbit]
+        sitesy = [Index(2, "y=$y") for y in 1:nbit]
+        sitesz = [Index(2, "z=$z") for z in 1:nbit]
+
+        if rev_carrydirec
+            sites = collect(Iterators.flatten(zip(sitesx, sitesy, sitesz)))
+        else
+            sites = collect(Iterators.flatten(zip(reverse(sitesx), reverse(sitesy), reverse(sitesz))))
+        end
+
+        g = randomMPS(sites)
+
+        function _reconst(M)
+            arr = Array(reduce(*, M), [reverse(sitesx)..., reverse(sitesy)..., reverse(sitesz)...])
+            return reshape(arr, N, N, N)
+        end
+
+        g_reconst = _reconst(g)
+
+        fx = MSSTA.reverseaxis(g; tag="x", alg="naive")
+        fx_reconst = _reconst(fx)
+
+        fy = MSSTA.reverseaxis(g; tag="y", alg="naive")
+        fy_reconst = _reconst(fy)
+
+        fz = MSSTA.reverseaxis(g; tag="z", alg="naive")
+        fz_reconst = _reconst(fz)
+
+        fx_ref = similar(fx_reconst)
+        fy_ref = similar(fy_reconst)
+        fz_ref = similar(fz_reconst)
+        for k in 0:(N-1), j in 0:(N-1), i in 0:(N-1)
+            fx_ref[i+1, j+1, k+1] = g_reconst[mod(N-i, N) + 1, j+1, k+1]
+            fy_ref[i+1, j+1, k+1] = g_reconst[i+1, mod(N-j, N) + 1, k+1]
+            fz_ref[i+1, j+1, k+1] = g_reconst[i+1, j+1, mod(N-k, N) + 1]
+        end
+
+        @test fx_reconst ≈ fx_ref
+        @test fy_reconst ≈ fy_ref
+        @test fz_reconst ≈ fz_ref
+    end
+
     @testset "phase_rotation" begin
         nqbit = 3
         xvec = collect(0:(2^nqbit - 1))

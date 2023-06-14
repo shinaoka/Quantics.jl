@@ -119,6 +119,24 @@ using ITensors
         @test tensor_ref ≈ tensor_reconst
     end
 
+    @testset "matchsiteinds_mpo2" begin
+        N = 2
+        physdim = 2
+
+        sites = [Index(physdim, "n=$n") for n in 1:(3N)]
+        sites_A = sites[1:3:end]
+        sites_B = sites[2:3:end]
+        sites_C = sites[3:3:end]
+        sites_BC = vcat(sites_B, sites_C)
+        M = randomMPO(sites_A) + randomMPO(sites_A)
+
+        M_ext = MSSTA.matchsiteinds(M, sites)
+
+        tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_BC])
+        tensor_reconst = reduce(*, M_ext)
+        @test tensor_ref ≈ tensor_reconst
+    end
+
     @testset "findallsites_by_tag" begin
         sites = [Index(1, "k=1"), Index(1, "x=1"), Index(1, "k=2")]
         @test MSSTA.findallsites_by_tag(sites; tag="k") == [1, 3]

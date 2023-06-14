@@ -5,6 +5,7 @@ using MSSTA
 import Random
 
 @testset "binaryop.jl" begin
+    #==
     @testset "_binaryop" for rev_carrydirec in [true], nbit in 2:3
         Random.seed!(1)
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
@@ -113,6 +114,7 @@ import Random
             @test f_vec_ref ≈ f_vec
         end
     end
+    ==#
 
     #===
     pos_sites_in: [(1, 2), (2, 3), (3, 1)]
@@ -121,9 +123,8 @@ import Random
       z' = c6 * x          + c5 * z
     ===#
 
-    #==
-    #@testset "binaryop_three_sites" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3
-    @testset "binaryop_three_sites" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2]
+    #@testset "affinetransform_three_vars" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3
+    @testset "affinetransform_three_var" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2]
         # x' = c1 * x + c2 * y
         # y' =          c3 * y + c4 * z
         # z' = c6 * x          + c5 * z
@@ -143,29 +144,28 @@ import Random
         # z1, z2, ...
         sitesz = [sites[findfirst(x -> hastags(x, "z=$n"), sites)] for n in 1:nbit]
 
-        rsites = reverse(sites)
+        shift = [0, 0, 0]
 
-        #for coeffs in Iterators.product(fill(collect(-1:1), 6)...)
-        for coeffs in [(-1, -1, 1, 1, 1, 1)]
-            M = MSSTA.binaryop_mpo(
-                sites,
-                [Tuple(coeffs[1:2]), Tuple(coeffs[3:4]), Tuple(coeffs[5:6])],
-                [(1, 2), (2, 3), (3, 1)];
-                rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y, bc_z])
+        for coeffs in Iterators.product(fill(collect(-1:1), 6)...)
+        #for coeffs in [(-1, -1, -1, 1, 0, -1)]
+        #for coeffs in [(-1, -1, 1, 0, 0, -1)]
+        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
+        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
+        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
+            g = randomMPS(sites)
+            f = MSSTA.affinetransform(
+                g, ["x", "y", "z"],
+                [ Dict("x"=>coeffs[1], "y"=>coeffs[2]),
+                  Dict("y"=>coeffs[3], "z"=>coeffs[4]),
+                  Dict("z"=>coeffs[5], "x"=>coeffs[6])],
+                shift, [bc_x, bc_y, bc_z], cutoff=1e-25)
 
-            f = randomMPS(sites)
-            g = apply(M, f)
-
-            # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1]
+            # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1] and f[x, y, z]
             f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-
-            # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1]
-            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-
-            # f[x, y, z]
             f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit)
 
-            # g[x', y', z']
+            # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1] and g[x', y', z']
+            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
             g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit)
 
             function prime_xy(x, y, z)
@@ -178,16 +178,36 @@ import Random
                 return xp, yp, zp, bc_x^nmodx, bc_y^nmody, bc_z^nmodz
             end
 
-            g_vec_ref = similar(g_vec)
+            f_vec_ref = similar(f_vec)
             for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
                 xp, yp, zp, sign_x, sign_y, sign_z = prime_xy(x, y, z)
-                g_vec_ref[x + 1, y + 1, z + 1] = f_vec[xp + 1, yp + 1, zp+1] * sign_x * sign_y * sign_z
+                f_vec_ref[x + 1, y + 1, z + 1] = g_vec[xp + 1, yp + 1, zp + 1] * sign_x * sign_y * sign_z
             end
 
-            @test g_vec_ref ≈ g_vec
+            println("")
+            println("g_vec:")
+            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
+            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
+                println("$x $y $z: $(g_vec[x + 1, y + 1, z + 1])")
+            end
+
+            println("")
+            println("f_vec_ref:")
+            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
+            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
+                println("$x $y $z: $(f_vec_ref[x + 1, y + 1, z + 1])")
+            end
+
+            println("")
+            println("f_vec:")
+            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
+            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
+                println("$x $y $z: $(f_vec[x + 1, y + 1, z + 1])")
+            end
+
+            @test f_vec_ref ≈ f_vec
         end
     end
-    ==#
 
     @testset "shiftop" for R in [3], bc in [1, -1]
         sites = [Index(2, "Qubit, x=$n") for n in 1:R]

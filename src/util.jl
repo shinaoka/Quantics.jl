@@ -330,11 +330,24 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     M_edge = addedges(M)
 
     linkdims_org = dim.(linkinds(M_edge))
-    linkdims_new = ones(Int, length(sites) + 1)
+    linkdims_new = zeros(Int, length(sites) + 1)
     for n in eachindex(M_edge)
         p = positions[n]
         linkdims_new[p] = linkdims_org[n]
         linkdims_new[p + 1] = linkdims_org[n + 1]
+    end
+
+    # Fill gaps
+    while any(linkdims_new .== 0)
+        for n in eachindex(linkdims_new)
+            if linkdims_new[n] == 0
+                if n >= 2 && linkdims_new[n - 1] != 0
+                    linkdims_new[n] = linkdims_new[n - 1]
+                elseif n < length(linkdims_new) && linkdims_new[n + 1] != 0
+                    linkdims_new[n] = linkdims_new[n + 1, 1]
+                end
+            end
+        end
     end
 
     links = [Index(linkdims_new[l], "Link,l=$(l-1)") for l in eachindex(linkdims_new)]
