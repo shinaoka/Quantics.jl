@@ -5,7 +5,6 @@ using MSSTA
 import Random
 
 @testset "binaryop.jl" begin
-    #==
     @testset "_binaryop" for rev_carrydirec in [true], nbit in 2:3
         Random.seed!(1)
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
@@ -114,21 +113,64 @@ import Random
             @test f_vec_ref ≈ f_vec
         end
     end
-    ==#
 
-    #===
-    pos_sites_in: [(1, 2), (2, 3), (3, 1)]
-      x' = c1 * x + c2 * y
-      y' =          c3 * y + c4 * z
-      z' = c6 * x          + c5 * z
-    ===#
+    affinetransform_testsets = []
 
-    #@testset "affinetransform_three_vars" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3
-    @testset "affinetransform_three_var" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2]
-        # x' = c1 * x + c2 * y
-        # y' =          c3 * y + c4 * z
-        # z' = c6 * x          + c5 * z
-        # f(x, y, z) = g(x', y', z')
+    # x' = x + y
+    # y' =     y + z
+    # z' = x     + z
+    push!(affinetransform_testsets, [1 1 0; 0 1 1; 1 0 1])
+
+    # x' = -x - y
+    # y' =      y + z
+    # z' =  x     + z
+    push!(affinetransform_testsets, [-1 -1 0; 0 1 1; 1 0 1])
+
+    # x' = -x     + z
+    # y' =      y + z
+    # z' =  x     + z
+    push!(affinetransform_testsets, [-1 0 1; 0 1 1; 1 0 1])
+
+    # x' =      y + z
+    # y' =      y + z
+    # z' =  x     + z
+    push!(affinetransform_testsets, [0 1 1; 0 1 1; 1 0 1])
+
+    # x' =      y - z
+    # y' =      y    
+    # z' =  x        
+    push!(affinetransform_testsets, [0 1 -1; 0 1 0; 1 0 0])
+
+    @testset "affinetransform_three_vars" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3, affmat in affinetransform_testsets
+    #@testset "affinetransform_three_var" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2], affmat in affinetransform_testsets
+        Random.seed!(1234)
+        varnames = ["x", "y", "z"]
+
+        # Read coefficient matrix
+        coeffs_dic = Dict{String,Int}[]
+        for newvar in 1:3
+            @test all(abs.(affmat[newvar, :]) .<= 1)
+            @test sum(abs.(affmat[newvar, :])) <= 2
+            @test sum(abs.(affmat[newvar, :])) > 0
+
+            coeffs = Dict{String,Int}()
+            for oldvar in 1:3
+                if affmat[newvar, oldvar] != 0
+                    coeffs[varnames[oldvar]] = affmat[newvar, oldvar]
+                end
+            end
+            if length(coeffs) == 1
+                for oldvar in 1:3
+                    if !(varnames[oldvar] ∈ keys(coeffs))
+                        coeffs[varnames[oldvar]] = 0
+                        break
+                    end
+                end
+            end
+            @test length(coeffs) == 2
+            push!(coeffs_dic, coeffs)
+        end
+
         if rev_carrydirec
             # x1, y1, z1, x2, y2, z2, ...
             sites = [Index(2, "Qubit, $name=$n") for n in 1:nbit for name in ["x", "y", "z"]]
@@ -144,69 +186,37 @@ import Random
         # z1, z2, ...
         sitesz = [sites[findfirst(x -> hastags(x, "z=$n"), sites)] for n in 1:nbit]
 
-        shift = [0, 0, 0]
+        shift = rand(-2*2^nbit:2*2^nbit, 3)
 
-        for coeffs in Iterators.product(fill(collect(-1:1), 6)...)
-        #for coeffs in [(-1, -1, -1, 1, 0, -1)]
-        #for coeffs in [(-1, -1, 1, 0, 0, -1)]
-        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
-        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
-        #for coeffs in [(-1, -1, 1, 0, 1, 0)]
-            g = randomMPS(sites)
-            f = MSSTA.affinetransform(
-                g, ["x", "y", "z"],
-                [ Dict("x"=>coeffs[1], "y"=>coeffs[2]),
-                  Dict("y"=>coeffs[3], "z"=>coeffs[4]),
-                  Dict("z"=>coeffs[5], "x"=>coeffs[6])],
-                shift, [bc_x, bc_y, bc_z], cutoff=1e-25)
+        g = randomMPS(sites)
+        f = MSSTA.affinetransform(
+            g, varnames,
+            coeffs_dic,
+            shift, [bc_x, bc_y, bc_z], cutoff=1e-25)
 
-            # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1] and f[x, y, z]
-            f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-            f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit)
+        # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1] and f[x, y, z]
+        f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
+        f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit)
 
-            # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1] and g[x', y', z']
-            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
-            g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit)
+        # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1] and g[x', y', z']
+        g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz)))
+        g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit)
 
-            function prime_xy(x, y, z)
-                xp_ = coeffs[1] * x + coeffs[2] * y
-                yp_ =                 coeffs[3] * y + coeffs[4] * z
-                zp_ = coeffs[6] * x                 + coeffs[5] * z
-                nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
-                nmody, yp = divrem(yp_, 2^nbit, RoundDown)
-                nmodz, zp = divrem(zp_, 2^nbit, RoundDown)
-                return xp, yp, zp, bc_x^nmodx, bc_y^nmody, bc_z^nmodz
-            end
-
-            f_vec_ref = similar(f_vec)
-            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
-                xp, yp, zp, sign_x, sign_y, sign_z = prime_xy(x, y, z)
-                f_vec_ref[x + 1, y + 1, z + 1] = g_vec[xp + 1, yp + 1, zp + 1] * sign_x * sign_y * sign_z
-            end
-
-            println("")
-            println("g_vec:")
-            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
-            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
-                println("$x $y $z: $(g_vec[x + 1, y + 1, z + 1])")
-            end
-
-            println("")
-            println("f_vec_ref:")
-            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
-            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
-                println("$x $y $z: $(f_vec_ref[x + 1, y + 1, z + 1])")
-            end
-
-            println("")
-            println("f_vec:")
-            #for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
-            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in [0]
-                println("$x $y $z: $(f_vec[x + 1, y + 1, z + 1])")
-            end
-
-            @test f_vec_ref ≈ f_vec
+        function prime_xy(x, y, z)
+            xp_, yp_, zp_ = affmat * [x, y, z] .+ shift
+            nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
+            nmody, yp = divrem(yp_, 2^nbit, RoundDown)
+            nmodz, zp = divrem(zp_, 2^nbit, RoundDown)
+            return xp, yp, zp, bc_x^nmodx, bc_y^nmody, bc_z^nmodz
         end
+
+        f_vec_ref = similar(f_vec)
+        for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1), z in 0:(2^nbit - 1)
+            xp, yp, zp, sign_x, sign_y, sign_z = prime_xy(x, y, z)
+            f_vec_ref[x + 1, y + 1, z + 1] = g_vec[xp + 1, yp + 1, zp + 1] * sign_x * sign_y * sign_z
+        end
+
+        @test f_vec_ref ≈ f_vec
     end
 
     @testset "shiftop" for R in [3], bc in [1, -1]

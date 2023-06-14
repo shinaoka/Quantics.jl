@@ -73,8 +73,9 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
     end
 
     res = ITensor(1)
+
     for n in 1:nsites
-        res *= delta(sites[n], [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]])
+        res *= dense(delta(sites[n], [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]]))
     end
 
     currentdummyinds = ones(Int, nsites)
@@ -92,6 +93,7 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
         push!(links_out, lout)
         res *= t
     end
+
     linkin = Index(prod(dim.(links_in)), "linkin")
     linkout = Index(prod(dim.(links_out)), "linkout")
     res = permute(res, [links_in..., links_out..., prime.(sites)..., sites...])
