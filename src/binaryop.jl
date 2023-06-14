@@ -89,30 +89,6 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
     return res
 end
 
-"""
-Compute boundary conditions for `f` from those for `g`.
-"""
-#==
-function _compute_bc_for_f(
-    coeffs::Vector{Tuple{Int,Int}},
-    pos_sites_in::Vector{Tuple{Int,Int}},
-    bc_g::Vector{Int})::Vector{Int}
-
-    N = length(coeffs)
-    bc_f = ones(Int, N)
-    for idx_f in 1:N
-        for idx_g in 1:N
-            for p in 1:2
-                if idx_f == pos_sites_in[idx_g][p] && coeffs[idx_g][p] != 0
-                    bc_f[idx_f] *= bc_g[idx_g]
-                end
-            end
-        end
-    end
-
-    return bc_f
-end
-==#
 
 """
 Construct an MPO representing a selector associated with binary operations.
@@ -130,24 +106,43 @@ We now define a new function by binary operations as
 f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2),
 where a, b, c, d = +/- 1, 0, and s1, s1 are arbitrary integers.
 
-Let us first explain the case of s1, s2 = 0 (no shift).
-
-The transform from `g` to `f` can be represented as an MPO:
-f(x_1, y_1, ..., x_R, y_R) = M(x_1, y_1, ...; x'_1, y'_1, ...) f(x'_1, y'_1, ..., x'_R, y'_R).
-
-The MPO `M` acts a selector: The MPO selects values from `f` to form `g`.
-
-For rev_carrydirec = false, the returned MPO represents
-f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ..., x'_1, y'_1).
-
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
 function affinetransform(
     M::MPS,
     tags::AbstractVector{String},
-    coeffs_dic::Vector{Dict{String,Int}};
-    bc::Union{Nothing,Vector{Int}}=nothing,
-    shift::Union{Nothing,Vector{Int}}=nothing,
+    coeffs_dic::AbstractVector{Dict{String,Int}},
+    shift::AbstractVector{Int},
+    bc::AbstractVector{Int};
+    kwargs...)
+    # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
+    #         = h(a * x + b * y,      c * x + d * y),
+    # where h(x, y) = g(x + s1, y + s2).
+    # The transformation is executed in this order: g -> h -> f.
+
+    # Number of variables involved in transformation
+    ntransvars = length(tags)
+
+    length(shift) == ntransvars || error("Length of shift must be equal to that of tags.")
+
+    # If shift is required
+    if !all(shift .== 0)
+        for i in 1:ntransvars
+            M = shiftaxis(M, shift[i], tag=tags[i], bc=bc[i]; kwargs...)
+        end
+    end
+
+    # Followed by a rotation
+    return affinetransform(M, tags, coeffs_dic, bc; kwargs...)
+end
+
+
+# Version without shift
+function affinetransform(
+    M::MPS,
+    tags::AbstractVector{String},
+    coeffs_dic::AbstractVector{Dict{String,Int}},
+    bc::AbstractVector{Int};
     kwargs...)
 
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
@@ -158,14 +153,6 @@ function affinetransform(
     # Number of variables involved in transformation
     ntransvars = length(tags)
     
-    # Set default values
-    if bc === nothing
-        bc = ones(Int64, ntransvars) # Default: periodic boundary condition
-    end
-    if shift === nothing
-        shift = zeros(Int64, ntransvars) # Default: no shift
-    end
-
     tags_to_pos = Dict(tag => i for (i, tag) in enumerate(tags))
 
     all([length(c)==2 for c in coeffs_dic]) || error("Length of each element in coeffs_dic must be 2")
@@ -202,20 +189,16 @@ function affinetransform(
     valid_rev_carrydirecs || error("The order of significant bits must be consistent among all tags!")
 
     length(unique([length(s) for s in sites_for_tags])) == 1 || error("The number of sites for each tag must be the same! $([length(s) for s in sites_for_tags])")
-    R = length(sites_for_tags[1]) # Number of bits
 
     rev_carrydirec = all(rev_carrydirecs .== true) # If true, significant bits are at the left end.
 
     if !rev_carrydirec
         M_ = MPS([M[i] for i in length(M):-1:1]) # Reverse the order of sites
-        M_ = affinetransform(M_, reverse(tags), reverse(coeffs_dic); bc = reverse(bc), kwargs...)
+        M_ = affinetransform(M_, reverse(tags), reverse(coeffs_dic), reverse(bc); kwargs...)
         return MPS([M_[i] for i in length(M_):-1:1])
     end
 
     # Below, we assume rev_carrydirec = true (left significant bits are at the left end) 
-
-    # Current Limitation
-    #@assert ntransvars * R == length(sites) "The number of sites must be ntransvars * R!"
 
     sites_mpo = collect(Iterators.flatten(Iterators.zip(sites_for_tags...)))
     transformer = _binaryop_mpo(sites_mpo, coeffs, pos_sites_in, rev_carrydirec=rev_carrydirec, bc=bc)
@@ -265,8 +248,8 @@ function _binaryop_mpo(sites::Vector{Index{T}},
     end
 
     # First check transformations with -1 and -1; e.g., (a, b) = (-1, -1)
-    # These transformations are not supported in the backend.
-    # To support them, we need to flip the sign of coeffs as follows:
+    # These transformations are not supported in _binaryop_mpo_backend.
+    # To support this case, we need to flip the sign of coeffs as follows:
     #  f(x, y) = h(x + y, c * x + d * y) = g(-x-y, c * x + d * y),
     # where h(x, y) = g(-x, y).
     # The transformation is taken place in this order: g -> h -> f.
@@ -282,7 +265,7 @@ function _binaryop_mpo(sites::Vector{Index{T}},
             continue
         end
         M_ = bc[i] * flipop(sites[i:nsites_bop:end], rev_carrydirec=rev_carrydirec, bc=bc[i])
-        M = apply(M, matchsiteinds(M_, sites), alg="naive", cutoff=1e-25)
+        M = apply(M, matchsiteinds(M_, sites), cutoff=1e-25)
     end
 
     return M

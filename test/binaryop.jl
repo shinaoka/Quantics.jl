@@ -5,7 +5,6 @@ using MSSTA
 import Random
 
 @testset "binaryop.jl" begin
-    #==
     @testset "_binaryop" for rev_carrydirec in [true], nbit in 2:3
         Random.seed!(1)
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
@@ -60,14 +59,12 @@ import Random
             @test f_vec_ref ≈ f_vec
         end
     end
-    ==#
 
-    #@testset "affinetransform" for rev_carrydirec in [true], nbit in 2:3
     @testset "affinetransform" for rev_carrydirec in [true, false], nbit in 2:3
         Random.seed!(1)
-        # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
-        # x' = a * x + b * y
-        # y' = c * x + d * y
+        # For a, b, c, d = +1, -1, 0,
+        #   x' = a * x + b * y + s1
+        #   y' = c * x + d * y + s2
         # f(x, y) = g(x', y')
         if rev_carrydirec
             # x1, y1, x2, y2, ...
@@ -81,12 +78,13 @@ import Random
         sitesx = [sites[findfirst(x -> hastags(x, "x=$n"), sites)] for n in 1:nbit]
         # y1, y2, ...
         sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
-        rsites = reverse(sites)
+        shift = rand(-2*2^nbit:2*2^nbit, 2)
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
-        #for a in [1], b in [1], c in [1], d in [1], bc_x in [1], bc_y in [1]
             g = randomMPS(sites)
-            f = MSSTA.affinetransform(g, ["x", "y"], [Dict("x"=>a, "y"=>b), Dict("x"=>c, "y"=>d)]; bc=[bc_x, bc_y])
+            f = MSSTA.affinetransform(
+                g, ["x", "y"], [Dict("x"=>a, "y"=>b), Dict("x"=>c, "y"=>d)],
+                shift, [bc_x, bc_y], cutoff=1e-25)
 
             # f[x_R, ..., x_1, y_R, ..., y_1] and f[x, y]
             f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy)))
@@ -99,8 +97,8 @@ import Random
             function prime_xy(x, y)
                 0 <= x < 2^nbit || error("something went wrong")
                 0 <= y < 2^nbit || error("something went wrong")
-                xp_ = a * x + b * y
-                yp_ = c * x + d * y
+                xp_ = a * x + b * y + shift[1]
+                yp_ = c * x + d * y + shift[2]
                 nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
                 nmody, yp = divrem(yp_, 2^nbit, RoundDown)
                 return xp, yp, bc_x^nmodx, bc_y^nmody
@@ -189,13 +187,14 @@ import Random
             @test g_vec_ref ≈ g_vec
         end
     end
+    ==#
 
     @testset "shiftop" for R in [3], bc in [1, -1]
         sites = [Index(2, "Qubit, x=$n") for n in 1:R]
         g = randomMPS(sites)
 
         for shift in [0, 1, 2, 2^R-1]
-            M = MSSTA._shift_mpo(sites, shift, bc)
+            M = MSSTA._shift_mpo(sites, shift; bc=bc)
             f = apply(M, g)
 
             f_vec = vec(Array(reduce(*, f), reverse(sites)))
@@ -211,6 +210,5 @@ import Random
             @test f_vec_ref ≈ f_vec
         end
     end
-    ==#
 end
 
