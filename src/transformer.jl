@@ -55,20 +55,22 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
 end
 
 
-"""
+@doc """
 f(x) = g(N - x) = M * g(x) for x = 0, 1, ..., N-1,
 where x = 0, 1, ..., N-1 and N = 2^R.
 
 Note that x = 0, 1, 2, ..., N-1 are mapped to x = 0, N-1, N-2, ..., 1 mod N.
 """
-function reverseaxis(M::MPS; rev_carrydirec=false, tag="", bc::Int=1, kwargs...)
-    sites = siteinds(M)
-    targetsites = sites
-    if tag != ""
-        targetsites = findallsiteinds_by_tag(sites; tag=tag)
-    end
+function reverseaxis(M::MPS; tag="x", bc::Int=1, kwargs...)
+    bc ∈ [1, -1] || error("bc must be either 1 or -1")
 
-    transformer = matchsiteinds(flipop(targetsites; rev_carrydirec=rev_carrydirec, bc=bc), sites)
+    sites = siteinds(M)
+    targetsites = findallsiteinds_by_tag(sites; tag=tag)
+    pos = findallsites_by_tag(sites; tag=tag)
+    !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
+    rev_carrydirec = isascendingorder(pos) 
+    siteinds_MPO = rev_carrydirec ? targetsites : reverse(targetsites)
+    transformer = matchsiteinds(flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc), sites)
 
     return apply(transformer, M; kwargs...)
 end
@@ -76,17 +78,25 @@ end
 """
 f(x) = g(x + shift) for x = 0, 1, ..., 2^R-1 and 0 <= shift < 2^R.
 """
-function shiftaxis(M::MPS, shift::Int; tag="", bc::Int=1, kwargs...)
+function shiftaxis(M::MPS, shift::Int; tag="x", bc::Int=1, kwargs...)
+    bc ∈ [1, -1] || error("bc must be either 1 or -1")
+
     sites = siteinds(M)
-    targetsites = sites
-    if tag != ""
-        targetsites = findallsiteinds_by_tag(sites; tag=tag)
-    end
+    targetsites = findallsiteinds_by_tag(sites; tag=tag) # From left to right: x=1, 2, ...
+    pos = findallsites_by_tag(sites; tag=tag)
+    !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
+    rev_carrydirec = isascendingorder(pos) 
 
     R = length(targetsites)
     nbc, shift_mod = divrem(shift, 2^R, RoundDown)
 
-    transformer = matchsiteinds(shift_mpo(targetsites, shift_mod, bc), sites)
+    if rev_carrydirec
+        transformer = _shift_mpo(targetsites, shift_mod, bc=bc)
+    else
+        transformer = _shift_mpo(targetsites, shift_mod, bc=bc)
+        transformer = MPO([transformer[n] for n in reverse(1:length(transformer))])
+    end
+    transformer = matchsiteinds(transformer, sites)
     transformer *= bc ^ nbc
 
     return apply(transformer, M; kwargs...)

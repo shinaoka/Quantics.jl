@@ -297,6 +297,8 @@ _getbit(i, pos) = ((i & (1 << pos)) >> pos)
 isascendingorder(x) = issorted(x; lt=isless)
 isdecendingorder(x) = issorted(x; lt=Base.isgreater)
 
+isascendingordescending(x) = isascendingorder(x) || isdecendingorder(x)
+
 function kronecker_deltas(sitesin; sitesout=prime.(noprime.(sitesin)))
     N = length(sitesout)
     links = [Index(1, "Link,l=$l") for l in 0:N]

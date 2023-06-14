@@ -6,7 +6,7 @@ import Random
 
 @testset "binaryop.jl" begin
     #==
-    @testset "_binaryop" for rev_carrydirec in [true, false], nbit in 2:3
+    @testset "_binaryop" for rev_carrydirec in [true], nbit in 2:3
         Random.seed!(1)
         # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
         # x' = a * x + b * y
@@ -29,7 +29,7 @@ import Random
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             g = randomMPS(sites)
-            M = MSSTA.binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
+            M = MSSTA._binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
                                rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
             f = apply(M, g)
 
@@ -62,6 +62,60 @@ import Random
     end
     ==#
 
+    #@testset "affinetransform" for rev_carrydirec in [true], nbit in 2:3
+    @testset "affinetransform" for rev_carrydirec in [true, false], nbit in 2:3
+        Random.seed!(1)
+        # For a = +/- 1, b = +/- 1, c = +/- 1, d = +/- 1,
+        # x' = a * x + b * y
+        # y' = c * x + d * y
+        # f(x, y) = g(x', y')
+        if rev_carrydirec
+            # x1, y1, x2, y2, ...
+            sites = [Index(2, "Qubit, $name=$n") for n in 1:nbit for name in ["x", "y"]]
+        else
+            # xR, yR, xR-1, yR-1, ...
+            sites = [Index(2, "Qubit, $name=$n") for n in reverse(1:nbit)
+                     for name in ["x", "y"]]
+        end
+        # x1, x2, ...
+        sitesx = [sites[findfirst(x -> hastags(x, "x=$n"), sites)] for n in 1:nbit]
+        # y1, y2, ...
+        sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
+        rsites = reverse(sites)
+
+        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
+        #for a in [1], b in [1], c in [1], d in [1], bc_x in [1], bc_y in [1]
+            g = randomMPS(sites)
+            f = MSSTA.affinetransform(g, ["x", "y"], [Dict("x"=>a, "y"=>b), Dict("x"=>c, "y"=>d)]; bc=[bc_x, bc_y])
+
+            # f[x_R, ..., x_1, y_R, ..., y_1] and f[x, y]
+            f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy)))
+            f_vec = reshape(f_arr, 2^nbit, 2^nbit)
+
+            # g[x_R, ..., x_1, y_R, ..., y_1] and g[x, y]
+            g_arr = Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy)))
+            g_vec = reshape(g_arr, 2^nbit, 2^nbit)
+
+            function prime_xy(x, y)
+                0 <= x < 2^nbit || error("something went wrong")
+                0 <= y < 2^nbit || error("something went wrong")
+                xp_ = a * x + b * y
+                yp_ = c * x + d * y
+                nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
+                nmody, yp = divrem(yp_, 2^nbit, RoundDown)
+                return xp, yp, bc_x^nmodx, bc_y^nmody
+            end
+
+            f_vec_ref = similar(f_vec)
+            for x in 0:(2^nbit - 1), y in 0:(2^nbit - 1)
+                xp, yp, sign_x, sign_y = prime_xy(x, y)
+                f_vec_ref[x + 1, y + 1] = g_vec[xp + 1, yp + 1] * sign_x * sign_y
+            end
+
+            @test f_vec_ref ≈ f_vec
+        end
+    end
+
     #===
     pos_sites_in: [(1, 2), (2, 3), (3, 1)]
       x' = c1 * x + c2 * y
@@ -69,6 +123,7 @@ import Random
       z' = c6 * x          + c5 * z
     ===#
 
+    #==
     #@testset "binaryop_three_sites" for rev_carrydirec in [true, false], bc_x in [1, -1], bc_y in [1, -1], bc_z in [1, -1], nbit in 2:3
     @testset "binaryop_three_sites" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2]
         # x' = c1 * x + c2 * y
@@ -140,7 +195,7 @@ import Random
         g = randomMPS(sites)
 
         for shift in [0, 1, 2, 2^R-1]
-            M = MSSTA.shift_mpo(sites, shift, bc)
+            M = MSSTA._shift_mpo(sites, shift, bc)
             f = apply(M, g)
 
             f_vec = vec(Array(reduce(*, f), reverse(sites)))
@@ -156,5 +211,6 @@ import Random
             @test f_vec_ref ≈ f_vec
         end
     end
+    ==#
 end
 

@@ -142,32 +142,117 @@ f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ...
 
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
-function binaryop_mpo_shift(sites::Vector{Index{T}},
-    coeffs::Vector{Tuple{Int,Int}},
-    pos_sites_in::Vector{Tuple{Int,Int}},
-    shift::Vector{Tuple{Int,Int}};
-    rev_carrydirec=false,
-    bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
-
-    # Number of variables involved in transformation
-    nsites_bop = length(coeffs)
-
-    length(pos_sites_in) == nsites_bop || error("Length of pos_sites_in does not match that of coeffs")
-    length(shift) == nsites_bop || error("Length of shift does not match that of coeffs")
+function affinetransform(
+    M::MPS,
+    tags::AbstractVector{String},
+    coeffs_dic::Vector{Dict{String,Int}};
+    bc::Union{Nothing,Vector{Int}}=nothing,
+    shift::Union{Nothing,Vector{Int}}=nothing,
+    kwargs...)
 
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
     #         = h(a * x + b * y,      c * x + d * y),
     # where h(x, y) = g(x + s1, y + s2).
     # The transformation is taken place in this order: g -> h -> f.
 
-    # g -> h
-    #M_g_to_h = shift_mpo(sites, shift, rev_carrydirec=rev_carrydirec, bc=bc[i])
+    # Number of variables involved in transformation
+    ntransvars = length(tags)
+    
+    # Set default values
+    if bc === nothing
+        bc = ones(Int64, ntransvars) # Default: periodic boundary condition
+    end
+    if shift === nothing
+        shift = zeros(Int64, ntransvars) # Default: no shift
+    end
 
-    # h -> f
-    M_h_to_f = binaryop_mpo(sites, coeffs, pos_sites_in, rev_carrydirec=rev_carrydirec, bc=bc)
+    tags_to_pos = Dict(tag => i for (i, tag) in enumerate(tags))
+
+    all([length(c)==2 for c in coeffs_dic]) || error("Length of each element in coeffs_dic must be 2")
+
+    coeffs = Tuple{Int,Int}[]
+    pos_sites_in = Tuple{Int,Int}[]
+    for inewval in 1:ntransvars
+        length(coeffs_dic[inewval]) == 2 || error("Length of each element in coeffs_dic must be 2: $(coeffs_dic[inewval])")
+        pos_sites_in_ = [tags_to_pos[t] for (t, c) in coeffs_dic[inewval]]
+        length(unique(pos_sites_in_)) == 2 || error("Each element of pos_sites_in must contain two different values: $(pos_sites_in_)")
+        all(pos_sites_in_ .>= 0) || error("Invalid tag: $(coeffs_dic[inewval])")
+
+        push!(pos_sites_in, Tuple(pos_sites_in_))
+        push!(coeffs, Tuple([c for (t, c) in coeffs_dic[inewval]]))
+    end
+
+    length(tags) == ntransvars || error("Length of tags does not match that of coeffs")
+    length(pos_sites_in) == ntransvars || error("Length of pos_sites_in does not match that of coeffs")
+
+    sites = siteinds(M)
+
+    # Check if the order of significant bits is consistent among all tags
+    rev_carrydirecs = Bool[]
+    pos_for_tags = []
+    sites_for_tags = []
+    for i in 1:ntransvars
+       push!(sites_for_tags, findallsiteinds_by_tag(sites; tag=tags[i]))
+       pos_for_tag = findallsites_by_tag(sites; tag=tags[i])
+       push!(rev_carrydirecs, isascendingorder(pos_for_tag))
+       push!(pos_for_tags, pos_for_tag)
+    end
+
+    valid_rev_carrydirecs = all(rev_carrydirecs .== true) || all(rev_carrydirecs .== false)
+    valid_rev_carrydirecs || error("The order of significant bits must be consistent among all tags!")
+
+    length(unique([length(s) for s in sites_for_tags])) == 1 || error("The number of sites for each tag must be the same! $([length(s) for s in sites_for_tags])")
+    R = length(sites_for_tags[1]) # Number of bits
+
+    rev_carrydirec = all(rev_carrydirecs .== true) # If true, significant bits are at the left end.
+
+    if !rev_carrydirec
+        M_ = MPS([M[i] for i in length(M):-1:1]) # Reverse the order of sites
+        M_ = affinetransform(M_, reverse(tags), reverse(coeffs_dic); bc = reverse(bc), kwargs...)
+        return MPS([M_[i] for i in length(M_):-1:1])
+    end
+
+    # Below, we assume rev_carrydirec = true (left significant bits are at the left end) 
+
+    # Current Limitation
+    #@assert ntransvars * R == length(sites) "The number of sites must be ntransvars * R!"
+
+    sites_mpo = collect(Iterators.flatten(Iterators.zip(sites_for_tags...)))
+    transformer = _binaryop_mpo(sites_mpo, coeffs, pos_sites_in, rev_carrydirec=rev_carrydirec, bc=bc)
+
+    # Match siteinds
+    transformer = matchsiteinds(transformer, sites)
+
+    return apply(transformer, M; kwargs...)
 end
 
-function binaryop_mpo(sites::Vector{Index{T}},
+"""
+Construct an MPO representing a selector associated with binary operations.
+
+We describe the functionality for length(coeffs) = 2 (nsites_bop).
+In this case, site indices are split into a list of chuncks of nsites_bop sites.
+
+Binary operations are applied to each chunck and the direction of carry is forward (rev_carrydirec=true)
+or backward (rev_carrydirec=false).
+
+Assumed rev_carrydirec = true, we consider a two-variable g(x, y), which is quantized as
+x = (x_1 ... x_R)_2, y = (y_1 ... y_R)_2.
+
+We now define a new function by binary operations as
+f(x, y) = g(a * x + b * y, c * x + d * y),
+where a, b, c, d = +/- 1, 0, and s1, s1 are arbitrary integers.
+
+The transform from `g` to `f` can be represented as an MPO:
+f(x_1, y_1, ..., x_R, y_R) = M(x_1, y_1, ...; x'_1, y'_1, ...) f(x'_1, y'_1, ..., x'_R, y'_R).
+
+The MPO `M` acts a selector: The MPO selects values from `f` to form `g`.
+
+For rev_carrydirec = false, the returned MPO represents
+f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ..., x'_1, y'_1).
+
+`bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
+"""
+function _binaryop_mpo(sites::Vector{Index{T}},
                       coeffs::Vector{Tuple{Int,Int}},
                       pos_sites_in::Vector{Tuple{Int,Int}};
                       rev_carrydirec=false,
@@ -189,7 +274,7 @@ function binaryop_mpo(sites::Vector{Index{T}},
     coeffs_ = [(sign_flips[i] ? abs.(coeffs[i]) : coeffs[i]) for i in eachindex(coeffs)]
 
     # For g->h
-    M = _binaryop_mpo(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec, bc=bc)
+    M = _binaryop_mpo_backend(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec, bc=bc)
 
     # For h->f
     for i in 1:nsites_bop
@@ -205,7 +290,7 @@ end
 
 
 # Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
-function _binaryop_mpo(sites::Vector{Index{T}},
+function _binaryop_mpo_backend(sites::Vector{Index{T}},
                       coeffs::Vector{Tuple{Int,Int}},
                       pos_sites_in::Vector{Tuple{Int,Int}};
                       rev_carrydirec=false,
@@ -250,11 +335,6 @@ function _binaryop_mpo(sites::Vector{Index{T}},
         end
         push!(inds_list, [lright, sites_[nsites_bop]', sites_[nsites_bop]])
 
-        #@show inds(tensor)
-        #@show inds_list
-        #for t in split_tensor(tensor, inds_list)
-            #@show inds(t)
-        #end
         tensors = vcat(tensors, split_tensor(tensor, inds_list))
     end
 
@@ -274,7 +354,7 @@ x: 0, ..., 2^R - 1
 
 We assume that left site indices correspond to significant digits
 """
-function shift_mpo(sites::Vector{Index{T}}, shift::Int; rev_carrydirec=false, bc::Int=1) where {T<:Number}
+function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Number}
     R = length(sites)
     0 <= shift <= 2^R-1 || error("Invalid shift")
 

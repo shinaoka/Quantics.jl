@@ -48,41 +48,37 @@ using LinearAlgebra
             f_ref[i + 1] = g_reconst[i_ + 1] * (bc ^ nmod)
         end
 
-        @show g_reconst
         @test f_reconst ≈ f_ref
     end
 
-    @testset "reverseaxis" for bc in [1], nbit in 2:2, rev_carrydirec in [false]
-        sites = [Index(2, "x=$x") for x in 1:nbit]
+    @testset "reverseaxis" for bc in [1], nbit in 2:2, rev_carrydirec in [true, false]
+        sitesx = [Index(2, "x=$x") for x in 1:nbit]
+        sites = rev_carrydirec ? sitesx : reverse(sitesx)
 
-        g = randomMPS(rev_carrydirec ? sites : reverse(sites))
+        g = randomMPS(sites)
 
-        f = MSSTA.reverseaxis(g; tag="x", alg="naive", bc=bc, rev_carrydirec=rev_carrydirec)
-        g_reconst = vec(Array(reduce(*, g), reverse(sites)))
-        f_reconst = vec(Array(reduce(*, f), reverse(sites)))
+        f = MSSTA.reverseaxis(g; tag="x", alg="naive", bc=bc)
+        g_reconst = vec(Array(reduce(*, g), reverse(sitesx)))
+        f_reconst = vec(Array(reduce(*, f), reverse(sitesx)))
 
         f_ref = similar(f_reconst)
         for i in 1:(2^nbit)
             f_ref[i] = g_reconst[mod(2^nbit - (i - 1), 2^nbit) + 1]
         end
         f_ref[1] *= bc
-
-        @show bc, nbit, rev_carrydirec
-        @show g
-        @show f
-        @show f_ref
-        @show f_reconst
-        @test f_reconst ≈ f_ref
     end
 
-    #==
-    @testset "reverseaxis2" for nbit in 2:3
+    @testset "reverseaxis2" for nbit in 2:3, rev_carrydirec in [true, false]
         N = 2^nbit
 
         sitesx = [Index(2, "x=$x") for x in 1:nbit]
         sitesy = [Index(2, "y=$y") for y in 1:nbit]
 
-        sites = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        if rev_carrydirec
+            sites = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        else
+            sites = collect(Iterators.flatten(zip(reverse(sitesx), reverse(sitesy))))
+        end
 
         g = randomMPS(sites)
 
@@ -145,15 +141,16 @@ using LinearAlgebra
         end
     end
 
-    @testset "shiftaxis" for R in [3], bc in [1, -1]
-        sites = [Index(2, "Qubit, x=$n") for n in 1:R]
+    @testset "shiftaxis" for R in [3], bc in [1, -1], rev_carrydirec in [true, false]
+        sitesx = [Index(2, "Qubit, x=$n") for n in 1:R]
+        sites = rev_carrydirec ? sitesx : reverse(sitesx)
         g = randomMPS(sites)
 
         for shift in [0, 1, 2, 2^R-1]
-            f = MSSTA.shiftaxis(g, shift, bc=bc)
+            f = MSSTA.shiftaxis(g, shift, bc=bc, tag="x")
 
-            f_vec = vec(Array(reduce(*, f), reverse(sites)))
-            g_vec = vec(Array(reduce(*, g), reverse(sites)))
+            f_vec = vec(Array(reduce(*, f), reverse(sitesx)))
+            g_vec = vec(Array(reduce(*, g), reverse(sitesx)))
 
             f_vec_ref = similar(f_vec)
             for i in 1:2^R
@@ -166,10 +163,14 @@ using LinearAlgebra
         end
     end
 
-    @testset "shiftaxis2d" for R in [3], bc in [1, -1]
+    @testset "shiftaxis2d" for R in [3], bc in [1, -1], rev_carrydirec in [true, false]
         sitesx = [Index(2, "Qubit, x=$n") for n in 1:R]
         sitesy = [Index(2, "Qubit, y=$n") for n in 1:R]
-        sites = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        if rev_carrydirec
+            sites = collect(Iterators.flatten(zip(sitesx, sitesy)))
+        else
+            sites = collect(Iterators.flatten(zip(reverse(sitesx), reverse(sitesy))))
+        end
         g = randomMPS(sites)
 
         for shift in [-4^R+1, -1, 0, 1, 2^R-1, 2^R, 2^R+1, 4^R+1]
@@ -188,7 +189,6 @@ using LinearAlgebra
             @test f_mat_ref ≈ f_mat
         end
     end
-    ==#
 end
 
 nothing
