@@ -23,7 +23,7 @@ function QuanticsInd{D}(inds::NTuple{D,QubitInd}) where {D}
     i = 0
     c = 2^(D - 1)
     for n in 1:D
-        i += c * (convert(Int, inds[n]) - 1)
+        i += c * (convert(Int, inds[D-n+1]) - 1)
         c = c >> 1
     end
     return QuanticsInd{D}(i + 1)
@@ -60,7 +60,7 @@ function asqubit(idx::QuanticsInd{D}) where {D}
     b = zeros(MVector{D,Int})
     i -= 1
     for n in 1:D
-        i, b[D - n + 1] = divrem(i, 2)
+        i, b[n] = divrem(i, 2)
     end
     b .+= 1
     return NTuple{D,QubitInd}(b)
@@ -86,39 +86,20 @@ function asquantics(::Val{D},
 end
 
 function quantics_to_index(inds::AbstractVector{QuanticsInd{D}}) where {D}
-    nquantics = length(inds)
-    qubits = reshape(asqubits(inds), D, nquantics)
+    R = length(inds) # Number of length-scale layers
+    qubits = reshape(asqubits(inds), D, R)
 
-    res = ones(MVector{D,Int})
-    c = 2^(nquantics - 1)
-    for iq in 1:nquantics
-        for n in 1:D
-            res[n] += c * (convert(Int, qubits[n, iq]) - 1)
-        end
-        c = c >> 1
-    end
-    return NTuple{D,Int}(res)
+    #res = ones(MVector{D,Int})
+    #c = 1
+    #for iq in 1:R
+        #for n in 1:D
+            #res[n] += c * (convert(Int, qubits[n, iq]) - 1)
+        #end
+        #c = c << 1
+    #end
+    #return NTuple{D,Int}(res)
+    return Tuple(qubit_to_index(qubits[n, :]) for n in 1:D)
 end
-
-#==
-function quantics_to_index(index::NTuple{D,Int}, R::Int) where {D}
-    for i in index
-        1 <= i <= 2^R || error("index is out of range!")
-    end
-
-    #qubits = reshape(asqubits(inds), N, nquantics)
-
-    res = ones(MVector{N,Int})
-    c = 2^(nquantics - 1)
-    for iq in 1:nquantics
-        for n in 1:N
-            res[n] += c * (convert(Int, qubits[n, iq]) - 1)
-        end
-        c = c >> 1
-    end
-    return NTuple{N,Int}(res)
-end
-==#
 
 """
 indices:
@@ -136,7 +117,17 @@ end
 """
 Convert qubit string for one-dimensional space into a integer index
 """
-qubit_to_index(inds::AbstractVector{QubitInd})::Int = MSSTA.quantics_to_index(inds)[1]
+#qubit_to_index(inds::AbstractVector{QubitInd})::Int = MSSTA.quantics_to_index(inds)[1]
+function qubit_to_index(inds::AbstractVector{QubitInd})::Int
+    R = length(inds)
+    c = 2^(R-1)
+    res = 1 # 1-base
+    for iq in eachindex(inds)
+        res += c * (convert(Int, inds[iq]) - 1)
+        c = c >> 1
+    end
+    return res
+end
 
 
 """
