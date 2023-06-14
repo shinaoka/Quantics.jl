@@ -136,6 +136,18 @@ function affinetransform(
     # Number of variables involved in transformation
     ntransvars = length(tags)
 
+    2 <= ntransvars || error("Number of variables for transformation must be greater than or equal to 2.")
+
+    sites_for_tag = []
+    for tag in tags
+        push!(sites_for_tag, findallsites_by_tag(siteinds(M); tag=tag))
+        if length(sites_for_tag[end]) == 0
+            error("Tag $tag is not found.")
+        end
+    end
+
+    length(unique(map(length, sites_for_tag))) == 1 || error("Number of sites for each tag must be equal.")
+
     length(shift) == ntransvars || error("Length of shift must be equal to that of tags.")
 
     # If shift is required
@@ -165,7 +177,19 @@ function affinetransform(
 
     # Number of variables involved in transformation
     ntransvars = length(tags)
-    
+
+    2 <= ntransvars || error("Number of variables for transformation must be greater than or equal to 2.")
+
+    sites_for_tag = []
+    for tag in tags
+        push!(sites_for_tag, findallsites_by_tag(siteinds(M); tag=tag))
+        if length(sites_for_tag[end]) == 0
+            error("Tag $tag is not found.")
+        end
+    end
+
+    length(unique(map(length, sites_for_tag))) == 1 || error("Number of sites for each tag must be equal.")
+
     tags_to_pos = Dict(tag => i for (i, tag) in enumerate(tags))
 
     all([length(c)==2 for c in coeffs_dic]) || error("Length of each element in coeffs_dic must be 2")
