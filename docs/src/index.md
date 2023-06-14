@@ -2,7 +2,7 @@
 CurrentModule = MSSTA
 ```
 
-# SparseIR
+# MSSTA
 
 Documentation for [MSSTA](https://github.com/shinaoka/MSSTA.jl).
 

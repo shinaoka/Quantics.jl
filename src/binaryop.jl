@@ -1,6 +1,7 @@
-"""
-  a * x + b * y, where a = 0/+/-1 and b = 0/+1/-1 but a + b != -2.
+@doc raw"""
+  ``a  x + b  y``, where ``a = 0, \pm 1`` and ``b = 0, \pm 1`` (``a + b \neq -2``).
 
+```
          out
           |
        --------
@@ -8,10 +9,9 @@
        --------
         |    |
         x    y
+```
 
-  T_{x, y, out, cin, cout} = 1 if a * x + b * y + cin = cout
-                           = 0 otherwise
-  `out`` is the output bit.
+  ``T_{x, y, \mathrm{out}, \mathrm{cin}, \mathrm{cout}} = 1`` if ``a  x + b  y + \mathrm{cin} = \mathrm{cout}``, ``=0`` otherwise (`out` is the output bit).
 """
 function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
                           site_out::Index{T},
