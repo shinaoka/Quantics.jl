@@ -3,7 +3,8 @@ using ITensors
 using StaticArrays
 import MSSTA
 import MSSTA: QuanticsInd, QubitInd, index_to_fused_quantics
-import MSSTA: fused_quantics_to_qubit, qubit_to_fused_quantics, fused_quantics_to_index, index_to_qubit
+import MSSTA: fused_quantics_to_qubit, qubit_to_fused_quantics, fused_quantics_to_index,
+              index_to_qubit
 import MSSTA: qubit_to_index
 
 function _to_ntuple(v::MVector{N,T}) where {N,T}
@@ -16,7 +17,8 @@ end
         @test fused_quantics_to_qubit(QuanticsInd{2}(2)) == Tuple(QubitInd.((2, 1)))
         @test fused_quantics_to_qubit(QuanticsInd{2}(3)) == Tuple(QubitInd.((1, 2)))
         @test fused_quantics_to_qubit(QuanticsInd{2}(4)) == Tuple(QubitInd.((2, 2)))
-        @test fused_quantics_to_qubit(QuanticsInd{2}.([1, 2, 3, 4])) == QubitInd.([1, 1, 2, 1, 1, 2, 2, 2])
+        @test fused_quantics_to_qubit(QuanticsInd{2}.([1, 2, 3, 4])) ==
+              QubitInd.([1, 1, 2, 1, 1, 2, 2, 2])
     end
 
     @testset "index_to_qubit_1D" begin
@@ -35,7 +37,7 @@ end
     @testset "index_to_qubit_2D" begin
         D = 2
         R = 3 # Three bits along each axis
-        for i in 1:2^R, j in 1:2^R
+        for i in 1:(2^R), j in 1:(2^R)
             # index => fused quantics => index
             fused_quantics = index_to_fused_quantics((i, j), R)
             index = fused_quantics_to_index(fused_quantics)
@@ -60,7 +62,8 @@ end
         # index = (3, 4)
         D = 2 # Two-dimensional space
         R = 3 # Number of bits along each axis
-        @test fused_quantics_to_qubit(QuanticsInd{D}.([1, 4, 3])) == QubitInd.([1, 1, 2, 2, 1, 2])
+        @test fused_quantics_to_qubit(QuanticsInd{D}.([1, 4, 3])) ==
+              QubitInd.([1, 1, 2, 2, 1, 2])
         @test fused_quantics_to_index(QuanticsInd{D}.([1, 4, 3])) == (3, 4)
         @test index_to_fused_quantics((3, 4), R) == QuanticsInd{D}.([1, 4, 3])
     end

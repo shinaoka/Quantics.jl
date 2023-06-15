@@ -119,13 +119,14 @@ function _splitsiteind(M::MPS, sites, s1, s2, csite)
            [sites[1:(n - 1)]..., s1, s2, sites[(n + 1):end]...]
 end
 
-function splitsiteind(M::MPS, sites::AbstractVector{Index{T}}; targetcsites=siteinds(M)) where {T}
+function splitsiteind(M::MPS, sites::AbstractVector{Index{T}};
+                      targetcsites=siteinds(M)) where {T}
     !hasedge(M) || error("M must not have edges")
     2 * length(targetcsites) == length(sites) || error("Length mismatch")
 
     newsites = Vector{Vector{Index{T}}}(undef, length(targetcsites))
     for n in 1:length(targetcsites)
-        newsites[n] = [sites[2n-1], sites[2n]]
+        newsites[n] = [sites[2n - 1], sites[2n]]
     end
 
     return unfuse_siteinds(M, targetcsites, newsites)
@@ -141,9 +142,8 @@ new_sites: Vector of vectors of new siteinds
 
 When splitting MPS tensors, the column major is assumed.
 """
-function unfuse_siteinds(
-    M::MPS, targetsites::Vector{Index{T}}, newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
-
+function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
+                         newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
     length(targetsites) == length(newsites) || error("Length mismatch")
     links = linkinds(M)
 
@@ -282,7 +282,7 @@ function split_tensor(tensor::ITensor, inds_list::Vector{Vector{Index{T}}}) wher
             Q, R, _ = qr(tensor, inds)
             push!(result, Q)
             if i < length(inds_list)
-                push!(inds_list[i+1], commonind(Q, R))
+                push!(inds_list[i + 1], commonind(Q, R))
             end
             tensor = R
         end

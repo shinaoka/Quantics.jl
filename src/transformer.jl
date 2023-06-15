@@ -15,23 +15,24 @@ end
 
 """
 This function returns an MPO, M, representing the transformation
-   f(x) = g(-x)
+f(x) = g(-x)
 where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 """
-function flipop_to_negativedomain(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO where {T}
+function flipop_to_negativedomain(sites::Vector{Index{T}}; rev_carrydirec=false,
+                                  bc::Int=1)::MPO where {T}
     return flipop(sites; rev_carrydirec=rev_carrydirec, bc=bc) * bc
 end
 
 """
 This function returns an MPO, M, representing the transformation
-   f(x) = g(2^R-x)
+f(x) = g(2^R-x)
 where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 
 `sites`: the sites of the output MPS
 """
 function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO where {T}
     if rev_carrydirec
-        M = flipop(reverse(sites), rev_carrydirec=false, bc=bc)
+        M = flipop(reverse(sites); rev_carrydirec=false, bc=bc)
         return MPO([M[n] for n in reverse(1:length(M))])
     end
 
@@ -56,7 +57,6 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     return M
 end
 
-
 @doc """
 f(x) = g(N - x) = M * g(x) for x = 0, 1, ..., N-1,
 where x = 0, 1, ..., N-1 and N = 2^R.
@@ -70,7 +70,7 @@ function reverseaxis(M::MPS; tag="x", bc::Int=1, kwargs...)
     targetsites = findallsiteinds_by_tag(sites; tag=tag)
     pos = findallsites_by_tag(sites; tag=tag)
     !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
-    rev_carrydirec = isascendingorder(pos) 
+    rev_carrydirec = isascendingorder(pos)
     siteinds_MPO = rev_carrydirec ? targetsites : reverse(targetsites)
     transformer_tag = flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc)
     transformer = matchsiteinds(transformer_tag, sites)
@@ -87,19 +87,19 @@ function shiftaxis(M::MPS, shift::Int; tag="x", bc::Int=1, kwargs...)
     targetsites = findallsiteinds_by_tag(sites; tag=tag) # From left to right: x=1, 2, ...
     pos = findallsites_by_tag(sites; tag=tag)
     !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
-    rev_carrydirec = isascendingorder(pos) 
+    rev_carrydirec = isascendingorder(pos)
 
     R = length(targetsites)
     nbc, shift_mod = divrem(shift, 2^R, RoundDown)
 
     if rev_carrydirec
-        transformer = _shift_mpo(targetsites, shift_mod, bc=bc)
+        transformer = _shift_mpo(targetsites, shift_mod; bc=bc)
     else
-        transformer = _shift_mpo(targetsites, shift_mod, bc=bc)
+        transformer = _shift_mpo(targetsites, shift_mod; bc=bc)
         transformer = MPO([transformer[n] for n in reverse(1:length(transformer))])
     end
     transformer = matchsiteinds(transformer, sites)
-    transformer *= bc ^ nbc
+    transformer *= bc^nbc
 
     return apply(transformer, M; kwargs...)
 end
@@ -127,7 +127,7 @@ function _upper_lower_triangle(upper_or_lower::Symbol)::Array{Float64,4}
 
     t[1, 1, 1, 1] = one(T)
     t[1, 1, 2, 2] = one(T)
-    
+
     if upper_or_lower == :upper
         t[1, 2, 1, 2] = one(T)
         t[1, 2, 2, 1] = zero(T)
@@ -145,7 +145,8 @@ end
 """
 Create QTT for a upper/lower triangle matrix filled with one except the diagonal line
 """
-function upper_lower_triangle_matrix(sites::Vector{Index{T}}, value::S; upper_or_lower::Symbol=:upper)::MPO where {T,S}
+function upper_lower_triangle_matrix(sites::Vector{Index{T}}, value::S;
+                                     upper_or_lower::Symbol=:upper)::MPO where {T,S}
     upper_or_lower ∈ [:upper, :lower] || error("Invalid upper_or_lower $(upper_or_lower)")
     N = length(sites)
 
@@ -158,7 +159,7 @@ function upper_lower_triangle_matrix(sites::Vector{Index{T}}, value::S; upper_or
     end
 
     M[1] *= onehot(links[1] => 1)
-    M[N] *= ITensor(S[0, value], links[N+1])
+    M[N] *= ITensor(S[0, value], links[N + 1])
 
     return M
 end
@@ -167,7 +168,7 @@ end
 Create MPO for cumulative sum in QTT
 
 includeown = False
-    y_i = sum_{j=1}^{i-1} x_j
+y_i = sum_{j=1}^{i-1} x_j
 """
 function cumsum(sites::Vector{Index}; includeown::Bool=false)
     includeown == False || error("includeown = True has not been implmented yet")

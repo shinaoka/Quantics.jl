@@ -59,7 +59,7 @@ end
         @test flag
     end
 
-    @testset "matmul"  for T in [Float64, ComplexF64]
+    @testset "matmul" for T in [Float64, ComplexF64]
         N = 3
         sitesx = [Index(2, "x=$n") for n in 1:N]
         sitesy = [Index(2, "y=$n") for n in 1:N]

@@ -75,20 +75,21 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
     res = ITensor(1)
 
     for n in 1:nsites
-        res *= dense(delta(sites[n], [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]]))
+        res *= dense(delta(sites[n],
+                           [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]]))
     end
 
     currentdummyinds = ones(Int, nsites)
     for n in 1:nsites
-        sites_ab =
-            setprime(sites_in[pos_sites_in[n][1]], currentdummyinds[pos_sites_in[n][1]]),
-            setprime(sites_in[pos_sites_in[n][2]], currentdummyinds[pos_sites_in[n][2]])
+        sites_ab = setprime(sites_in[pos_sites_in[n][1]],
+                            currentdummyinds[pos_sites_in[n][1]]),
+                   setprime(sites_in[pos_sites_in[n][2]],
+                            currentdummyinds[pos_sites_in[n][2]])
         for i in 1:2
             currentdummyinds[pos_sites_in[n][i]] += 1
         end
-        t, lin, lout = _binaryop_tensor(
-            coeffs[n]..., sites_ab..., sites[n]',
-            cin_on, cout_on, bc[n])
+        t, lin, lout = _binaryop_tensor(coeffs[n]..., sites_ab..., sites[n]',
+                                        cin_on, cout_on, bc[n])
         push!(links_in, lin)
         push!(links_out, lout)
         res *= t
@@ -101,7 +102,6 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
     res = ITensor(ITensors.data(res), [linkin, linkout, sites..., prime.(sites)...])
     return res
 end
-
 
 """
 Construct an MPO representing a selector associated with binary operations.
@@ -121,13 +121,12 @@ where a, b, c, d = +/- 1, 0, and s1, s1 are arbitrary integers.
 
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
-function affinetransform(
-    M::MPS,
-    tags::AbstractVector{String},
-    coeffs_dic::AbstractVector{Dict{String,Int}},
-    shift::AbstractVector{Int},
-    bc::AbstractVector{Int};
-    kwargs...)
+function affinetransform(M::MPS,
+                         tags::AbstractVector{String},
+                         coeffs_dic::AbstractVector{Dict{String,Int}},
+                         shift::AbstractVector{Int},
+                         bc::AbstractVector{Int};
+                         kwargs...)
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
     #         = h(a * x + b * y,      c * x + d * y),
     # where h(x, y) = g(x + s1, y + s2).
@@ -136,7 +135,8 @@ function affinetransform(
     # Number of variables involved in transformation
     ntransvars = length(tags)
 
-    2 <= ntransvars || error("Number of variables for transformation must be greater than or equal to 2.")
+    2 <= ntransvars ||
+        error("Number of variables for transformation must be greater than or equal to 2.")
 
     sites_for_tag = []
     for tag in tags
@@ -146,14 +146,15 @@ function affinetransform(
         end
     end
 
-    length(unique(map(length, sites_for_tag))) == 1 || error("Number of sites for each tag must be equal.")
+    length(unique(map(length, sites_for_tag))) == 1 ||
+        error("Number of sites for each tag must be equal.")
 
     length(shift) == ntransvars || error("Length of shift must be equal to that of tags.")
 
     # If shift is required
     if !all(shift .== 0)
         for i in 1:ntransvars
-            M = shiftaxis(M, shift[i], tag=tags[i], bc=bc[i]; kwargs...)
+            M = shiftaxis(M, shift[i]; tag=tags[i], bc=bc[i], kwargs...)
         end
     end
 
@@ -161,14 +162,12 @@ function affinetransform(
     return affinetransform(M, tags, coeffs_dic, bc; kwargs...)
 end
 
-
 # Version without shift
-function affinetransform(
-    M::MPS,
-    tags::AbstractVector{String},
-    coeffs_dic::AbstractVector{Dict{String,Int}},
-    bc::AbstractVector{Int};
-    kwargs...)
+function affinetransform(M::MPS,
+                         tags::AbstractVector{String},
+                         coeffs_dic::AbstractVector{Dict{String,Int}},
+                         bc::AbstractVector{Int};
+                         kwargs...)
 
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
     #         = h(a * x + b * y,      c * x + d * y),
@@ -178,7 +177,8 @@ function affinetransform(
     # Number of variables involved in transformation
     ntransvars = length(tags)
 
-    2 <= ntransvars || error("Number of variables for transformation must be greater than or equal to 2.")
+    2 <= ntransvars ||
+        error("Number of variables for transformation must be greater than or equal to 2.")
 
     sites_for_tag = []
     for tag in tags
@@ -188,18 +188,22 @@ function affinetransform(
         end
     end
 
-    length(unique(map(length, sites_for_tag))) == 1 || error("Number of sites for each tag must be equal.")
+    length(unique(map(length, sites_for_tag))) == 1 ||
+        error("Number of sites for each tag must be equal.")
 
     tags_to_pos = Dict(tag => i for (i, tag) in enumerate(tags))
 
-    all([length(c)==2 for c in coeffs_dic]) || error("Length of each element in coeffs_dic must be 2")
+    all([length(c) == 2 for c in coeffs_dic]) ||
+        error("Length of each element in coeffs_dic must be 2")
 
     coeffs = Tuple{Int,Int}[]
     pos_sites_in = Tuple{Int,Int}[]
     for inewval in 1:ntransvars
-        length(coeffs_dic[inewval]) == 2 || error("Length of each element in coeffs_dic must be 2: $(coeffs_dic[inewval])")
+        length(coeffs_dic[inewval]) == 2 ||
+            error("Length of each element in coeffs_dic must be 2: $(coeffs_dic[inewval])")
         pos_sites_in_ = [tags_to_pos[t] for (t, c) in coeffs_dic[inewval]]
-        length(unique(pos_sites_in_)) == 2 || error("Each element of pos_sites_in must contain two different values: $(pos_sites_in_)")
+        length(unique(pos_sites_in_)) == 2 ||
+            error("Each element of pos_sites_in must contain two different values: $(pos_sites_in_)")
         all(pos_sites_in_ .>= 0) || error("Invalid tag: $(coeffs_dic[inewval])")
 
         push!(pos_sites_in, Tuple(pos_sites_in_))
@@ -207,7 +211,8 @@ function affinetransform(
     end
 
     length(tags) == ntransvars || error("Length of tags does not match that of coeffs")
-    length(pos_sites_in) == ntransvars || error("Length of pos_sites_in does not match that of coeffs")
+    length(pos_sites_in) == ntransvars ||
+        error("Length of pos_sites_in does not match that of coeffs")
 
     sites = siteinds(M)
 
@@ -216,16 +221,18 @@ function affinetransform(
     pos_for_tags = []
     sites_for_tags = []
     for i in 1:ntransvars
-       push!(sites_for_tags, findallsiteinds_by_tag(sites; tag=tags[i]))
-       pos_for_tag = findallsites_by_tag(sites; tag=tags[i])
-       push!(rev_carrydirecs, isascendingorder(pos_for_tag))
-       push!(pos_for_tags, pos_for_tag)
+        push!(sites_for_tags, findallsiteinds_by_tag(sites; tag=tags[i]))
+        pos_for_tag = findallsites_by_tag(sites; tag=tags[i])
+        push!(rev_carrydirecs, isascendingorder(pos_for_tag))
+        push!(pos_for_tags, pos_for_tag)
     end
 
     valid_rev_carrydirecs = all(rev_carrydirecs .== true) || all(rev_carrydirecs .== false)
-    valid_rev_carrydirecs || error("The order of significant bits must be consistent among all tags!")
+    valid_rev_carrydirecs ||
+        error("The order of significant bits must be consistent among all tags!")
 
-    length(unique([length(s) for s in sites_for_tags])) == 1 || error("The number of sites for each tag must be the same! $([length(s) for s in sites_for_tags])")
+    length(unique([length(s) for s in sites_for_tags])) == 1 ||
+        error("The number of sites for each tag must be the same! $([length(s) for s in sites_for_tags])")
 
     rev_carrydirec = all(rev_carrydirecs .== true) # If true, significant bits are at the left end.
 
@@ -252,9 +259,11 @@ function affinetransform(
     end
 
     # Apply binary operations (nomore (-1, -1) coefficients)
-    coeffs_positive = [(sign_flips[n] ? abs.(coeffs[n]) : coeffs[n]) for n in eachindex(coeffs)]
+    coeffs_positive = [(sign_flips[n] ? abs.(coeffs[n]) : coeffs[n])
+                       for n in eachindex(coeffs)]
     sites_mpo = collect(Iterators.flatten(Iterators.zip(sites_for_tags...)))
-    transformer = _binaryop_mpo(sites_mpo, coeffs_positive, pos_sites_in, rev_carrydirec=true, bc=bc)
+    transformer = _binaryop_mpo(sites_mpo, coeffs_positive, pos_sites_in;
+                                rev_carrydirec=true, bc=bc)
     transformer = matchsiteinds(transformer, sites)
     M = apply(transformer, M; kwargs...)
 
@@ -288,10 +297,10 @@ f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ...
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
 function _binaryop_mpo(sites::Vector{Index{T}},
-                      coeffs::Vector{Tuple{Int,Int}},
-                      pos_sites_in::Vector{Tuple{Int,Int}};
-                      rev_carrydirec=false,
-                      bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+                       coeffs::Vector{Tuple{Int,Int}},
+                       pos_sites_in::Vector{Tuple{Int,Int}};
+                       rev_carrydirec=false,
+                       bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
     # Number of variables involved in transformation
     nsites_bop = length(coeffs)
 
@@ -309,27 +318,28 @@ function _binaryop_mpo(sites::Vector{Index{T}},
     coeffs_ = [(sign_flips[i] ? abs.(coeffs[i]) : coeffs[i]) for i in eachindex(coeffs)]
 
     # For g->h
-    M = _binaryop_mpo_backend(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec, bc=bc)
+    M = _binaryop_mpo_backend(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec,
+                              bc=bc)
 
     # For h->f
     for i in 1:nsites_bop
         if !sign_flips[i]
             continue
         end
-        M_ = bc[i] * flipop(sites[i:nsites_bop:end], rev_carrydirec=rev_carrydirec, bc=bc[i])
-        M = apply(M, matchsiteinds(M_, sites), cutoff=1e-25)
+        M_ = bc[i] *
+             flipop(sites[i:nsites_bop:end]; rev_carrydirec=rev_carrydirec, bc=bc[i])
+        M = apply(M, matchsiteinds(M_, sites); cutoff=1e-25)
     end
 
     return M
 end
 
-
 # Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
 function _binaryop_mpo_backend(sites::Vector{Index{T}},
-                      coeffs::Vector{Tuple{Int,Int}},
-                      pos_sites_in::Vector{Tuple{Int,Int}};
-                      rev_carrydirec=false,
-                      bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+                               coeffs::Vector{Tuple{Int,Int}},
+                               pos_sites_in::Vector{Tuple{Int,Int}};
+                               rev_carrydirec=false,
+                               bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
     nsites = length(sites)
     nsites_bop = length(coeffs)
     ncsites = nsites ÷ nsites_bop
@@ -381,7 +391,6 @@ function _binaryop_mpo_backend(sites::Vector{Index{T}},
     return M
 end
 
-
 """
 For given function `g(x)` and shift `s`, construct an MPO representing `f(x) = g(x + s)`.
 x: 0, ..., 2^R - 1
@@ -391,7 +400,7 @@ We assume that left site indices correspond to significant digits
 """
 function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Number}
     R = length(sites)
-    0 <= shift <= 2^R-1 || error("Invalid shift")
+    0 <= shift <= 2^R - 1 || error("Invalid shift")
 
     ys = MSSTA.tobin(shift, R)
 
@@ -402,14 +411,15 @@ function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Nu
         cin_on = n != R
         cout_on = n != 1
         sitey = Index(2, "Qubit, y")
-        t, link_in, link_out = MSSTA._binaryop_tensor(1, 1, sites[n]', sitey, sites[n], cin_on, cout_on, bc)
-        t *= onehot(sitey => ys[n]+1)
+        t, link_in, link_out = MSSTA._binaryop_tensor(1, 1, sites[n]', sitey, sites[n],
+                                                      cin_on, cout_on, bc)
+        t *= onehot(sitey => ys[n] + 1)
         if n < R
             push!(links, Index(dim(link_in), "link=$n"))
             replaceind!(t, link_in => links[end])
         end
         if n > 1
-            replaceind!(t, link_out => links[n-1])
+            replaceind!(t, link_out => links[n - 1])
         end
         if n == 1
             t *= onehot(link_out => 1)

@@ -5,9 +5,9 @@ module MSSTA
 using Distributed
 
 #@everywhere begin
-    #using Pkg
-    #Pkg.activate(".")
-    #Pkg.instantiate()
+#using Pkg
+#Pkg.activate(".")
+#Pkg.instantiate()
 #end
 
 using ITensors
@@ -23,7 +23,6 @@ using Memoize
 using TensorCrossInterpolation
 import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
 import TensorCrossInterpolation as TCI
-
 
 function __init__()
 end

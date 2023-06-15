@@ -56,7 +56,8 @@ using ITensors
 
         newsites_flatten = collect(Iterators.flatten(newsites))
         @test newsites_flatten == siteinds(mps_split)
-        @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈ vec(Array(reduce(*, mps), sites))
+        @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈
+              vec(Array(reduce(*, mps), sites))
     end
 
     @testset "linkinds" begin

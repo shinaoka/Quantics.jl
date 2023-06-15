@@ -31,7 +31,11 @@ import MSSTA
             dx = (grid_max .- grid_min) ./ 2^R
             g = MSSTA.DiscretizedGrid{d}(R, grid_min, grid_max)
 
-            cs = [0.999999 .* dx .+ grid_min, 1.999999 .* dx .+ grid_min, grid_max .- 1e-9 .* dx]
+            cs = [
+                0.999999 .* dx .+ grid_min,
+                1.999999 .* dx .+ grid_min,
+                grid_max .- 1e-9 .* dx
+            ]
             refs = [1, 2, 2^R]
 
             for (c, ref) in zip(cs, refs)
