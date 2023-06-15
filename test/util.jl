@@ -44,8 +44,7 @@ using ITensors
               vec(Array(reduce(*, mps), csites))
     end
 
-    @testset "split_siteinds" for nsites in [2, 4], R in [2, 3]
-        #sites = siteinds("Qubit", nsites)
+    @testset "unfuse_siteinds" for nsites in [2, 4], R in [2, 3]
         sites = [Index(2^R, "csite=$s") for s in 1:nsites]
 
         bonddim = 3
@@ -53,9 +52,10 @@ using ITensors
 
         newsites = [[Index(2, "n=$n,m=$m") for m in 1:R] for n in 1:nsites]
 
-        mps_split = MSSTA.split_siteinds(mps, sites, newsites)
+        mps_split = MSSTA.unfuse_siteinds(mps, sites, newsites)
 
         newsites_flatten = collect(Iterators.flatten(newsites))
+        @test newsites_flatten == siteinds(mps_split)
         @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈ vec(Array(reduce(*, mps), sites))
     end
 

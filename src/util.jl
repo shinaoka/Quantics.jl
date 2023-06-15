@@ -128,15 +128,20 @@ function splitsiteind(M::MPS, sites::AbstractVector{Index{T}}; targetcsites=site
         newsites[n] = [sites[2n-1], sites[2n]]
     end
 
-    return split_siteinds(M, targetcsites, newsites)
+    return unfuse_siteinds(M, targetcsites, newsites)
 end
 
 splitsiteinds = splitsiteind
 
 """
-Split the siteind of a MPS at the given sites
+Un-fuse the siteind of a MPS at the given sites
+
+target_sites: Vector of siteinds to split
+new_sites: Vector of vectors of new siteinds
+
+When splitting MPS tensors, the column major is assumed.
 """
-function split_siteinds(
+function unfuse_siteinds(
     M::MPS, targetsites::Vector{Index{T}}, newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
 
     length(targetsites) == length(newsites) || error("Length mismatch")
