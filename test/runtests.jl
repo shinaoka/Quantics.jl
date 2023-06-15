@@ -11,7 +11,7 @@ using Test
     include("qtt.jl")
     include("transformer.jl")
     include("grid.jl")
-    #include("tci.jl")
+    include("tci.jl")
 #end
 
     #include("cubature.jl")

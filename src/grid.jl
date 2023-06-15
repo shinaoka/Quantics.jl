@@ -16,7 +16,7 @@ originalcoordinate(g::Grid, index::NTuple{N,Int}) where {N} = grididx_to_origcoo
 """
 Convert an grid index to quantices indices
 """
-grididx_to_quantics(g::Grid, grididx::NTuple{N,Int}) where {N} = index_to_quantics(grididx, g.R)
+grididx_to_quantics(g::Grid, grididx::NTuple{N,Int}) where {N} = index_to_fused_quantics(grididx, g.R)
 
 
 # Backward compatibility
@@ -27,7 +27,7 @@ to_quantics(g::Grid, grididx::NTuple{N,Int}) where {N} = grididx_to_quantics(g, 
 Convert quantics indices to the original coordinate system
 """
 function quantics_to_origcoord(g::Grid, index::AbstractVector{QuanticsInd{N}}) where {N}
-    return grididx_to_origcoord(g, quantics_to_index(index))
+    return grididx_to_origcoord(g, fused_quantics_to_index(index))
 end
 
 # Backward compatibility
