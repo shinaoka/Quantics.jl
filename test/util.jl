@@ -31,7 +31,7 @@ using ITensors
         @test all(dim.(siteinds(Mc)) .== [2, 4, 4, 2])
     end
 
-    @testset "splitsiteind" for nbit in [4, 6]
+    @testset "splitsiteind (deprecated)" for nbit in [4, 6]
         sites = siteinds("Qubit", nbit)
         csites = [Index(4, "csite=$s") for s in 1:(nbit ÷ 2)]
         D = 3
@@ -42,6 +42,21 @@ using ITensors
         mps_reconst = MSSTA.combinesiteinds(mps_split, csites)
         @test vec(Array(reduce(*, mps_reconst), csites)) ≈
               vec(Array(reduce(*, mps), csites))
+    end
+
+    @testset "split_siteinds" for nsites in [2, 4], R in [2, 3]
+        #sites = siteinds("Qubit", nsites)
+        sites = [Index(2^R, "csite=$s") for s in 1:nsites]
+
+        bonddim = 3
+        mps = randomMPS(sites; linkdims=bonddim)
+
+        newsites = [[Index(2, "n=$n,m=$m") for m in 1:R] for n in 1:nsites]
+
+        mps_split = MSSTA.split_siteinds(mps, sites, newsites)
+
+        newsites_flatten = collect(Iterators.flatten(newsites))
+        @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈ vec(Array(reduce(*, mps), sites))
     end
 
     @testset "linkinds" begin

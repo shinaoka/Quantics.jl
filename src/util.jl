@@ -119,25 +119,50 @@ function _splitsiteind(M::MPS, sites, s1, s2, csite)
            [sites[1:(n - 1)]..., s1, s2, sites[(n + 1):end]...]
 end
 
-function splitsiteind(M::MPS, sites; targetcsites=siteinds(M))
+function splitsiteind(M::MPS, sites::AbstractVector{Index{T}}; targetcsites=siteinds(M)) where {T}
     !hasedge(M) || error("M must not have edges")
     2 * length(targetcsites) == length(sites) || error("Length mismatch")
 
-    sites_res = siteinds(M)
-    M = deepcopy(M)
-    addedges!(M)
-
-    res = copy(M)
-    for n in eachindex(targetcsites)
-        res, sites_res = _splitsiteind(res, sites_res, sites[2 * n - 1], sites[2 * n],
-                                       targetcsites[n])
+    newsites = Vector{Vector{Index{T}}}(undef, length(targetcsites))
+    for n in 1:length(targetcsites)
+        newsites[n] = [sites[2n-1], sites[2n]]
     end
 
-    removeedges!(res, sites_res)
-    return res
+    return split_siteinds(M, targetcsites, newsites)
 end
 
 splitsiteinds = splitsiteind
+
+"""
+Split the siteind of a MPS at the given sites
+"""
+function split_siteinds(
+    M::MPS, targetsites::Vector{Index{T}}, newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
+
+    length(targetsites) == length(newsites) || error("Length mismatch")
+    links = linkinds(M)
+
+    tensors = Any[M[n] for n in eachindex(M)]
+    for n in 1:length(targetsites)
+        pos = findsite(M, targetsites[n])
+        pos == n || error("Target site not found")
+
+        newinds = [[s] for s in newsites[n]]
+        links_ = Index{T}[]
+        if n > 1
+            push!(links_, links[n - 1])
+            push!(newinds[1], links[n - 1])
+        end
+        if n < length(targetsites)
+            push!(links_, links[n])
+            push!(newinds[end], links[n])
+        end
+        tensor_data = ITensors.data(permute(copy(M[pos]), targetsites[n], links_...))
+        tensors[n] = split_tensor(ITensor(tensor_data, newsites[n]..., links_...), newinds)
+    end
+
+    return MPS(collect(Iterators.flatten(tensors)))
+end
 
 function addedges!(x::MPS)
     length(inds(x[1])) == 2 || error("Dim of the first tensor must be 2")
@@ -243,7 +268,7 @@ end
 Decompose a tensor into a set of indices by QR
 """
 function split_tensor(tensor::ITensor, inds_list::Vector{Vector{Index{T}}}) where {T}
-    inds_list = copy(inds_list)
+    inds_list = deepcopy(inds_list)
     result = ITensor[]
     for (i, inds) in enumerate(inds_list)
         if i == length(inds_list)
