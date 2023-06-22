@@ -149,7 +149,13 @@ end
 By default, elementwise multiplication will be performed.
 """
 function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
-                 tag_col::String="", alg="naive", cutoff_init=1e-2, kwargs...)
+                 tag_col::String="", alg="naive", kwargs...)
+
+     if in(:maxbonddim, keys(kwargs))
+         error("Illegal keyward parameter: maxbonddim. Use maxdim instead!")
+     end
+ 
+
     sites_row = findallsiteinds_by_tag(siteinds(M1); tag=tag_row)
     sites_shared = findallsiteinds_by_tag(siteinds(M1); tag=tag_shared)
     sites_col = findallsiteinds_by_tag(siteinds(M2); tag=tag_col)
@@ -179,6 +185,10 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
 
     M = MSSTA.postprocess(matmul, M)
     M = MSSTA.postprocess(ewmul, M)
+
+    if in(:maxdim, keys(kwargs))
+        truncate!(M; maxdim=kwargs[:maxdim])
+    end
 
     return asMPS(M)
 end
