@@ -4,5 +4,5 @@
 
 ## Prerequisites
 * ITensors.jl
-* ITensorNetworks.jl
+* ITensorTDVP.jl
 * TensorCrossInterpolation.jl (not public yet)

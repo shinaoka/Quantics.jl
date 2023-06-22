@@ -13,7 +13,7 @@ using Distributed
 using ITensors
 import ITensors
 import ITensors.NDTensors: Tensor, BlockSparseTensor, blockview
-using ITensorNetworks
+using ITensorTDVP
 
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I

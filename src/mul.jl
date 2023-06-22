@@ -169,9 +169,10 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
 
     if alg == "fit"
         # Ideally, we want to use fitting algorithm but MPO-MPO contraction is not supported yet.
-        init = contract(truncate(M1_; cutoff=cutoff_init),
-                        truncate(M2_; cutoff=cutoff_init); alg="naive", kwargs...)
-        M = MSSTA.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
+        #init = contract(truncate(M1_; cutoff=cutoff_init),
+                        #truncate(M2_; cutoff=cutoff_init); alg="naive", kwargs...)
+        #M = MSSTA.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
+        M = MSSTA.asMPO(_contract_fit(M1_, M2_; kwargs...))
     elseif alg == "naive"
         M = MSSTA.asMPO(contract(M1_, M2_; alg="naive", kwargs...))
     end

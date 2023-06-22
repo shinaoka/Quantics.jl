@@ -12,6 +12,7 @@ include("qtt.jl")
 include("transformer.jl")
 include("grid.jl")
 include("tci.jl")
+include("patch.jl")
 #end
 
 #include("cubature.jl")
