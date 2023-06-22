@@ -1,3 +1,9 @@
+module TensorCrossInterpolationExt 
+
+using TensorCrossInterpolation
+import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
+import TensorCrossInterpolation as TCI
+
 function TCItoMPS(tci::Union{TensorCI{T},TensorCI2{T}}, sites=nothing) where {T}
     tensors = TCI.tensortrain(tci)
     ranks = TCI.rank(tci)
@@ -279,4 +285,6 @@ function adaptivetci(::Type{T}, f, localdims::AbstractVector{Int};
     end
 
     return _to_tree(leaves_done)
+end
+
 end

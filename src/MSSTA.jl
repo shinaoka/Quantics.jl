@@ -20,9 +20,6 @@ import LinearAlgebra: I
 using StaticArrays
 using Memoize
 
-using TensorCrossInterpolation
-import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2
-import TensorCrossInterpolation as TCI
 
 function __init__()
 end
@@ -39,7 +36,7 @@ include("transformer.jl")
 include("qtt.jl")
 include("patch.jl")
 include("grid.jl")
-include("tci.jl")
+#include("tci.jl")
 include("cubature.jl")
 
 end
