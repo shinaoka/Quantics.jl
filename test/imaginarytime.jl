@@ -1,5 +1,5 @@
 using Test
-using MSSTA
+using Quantics
 import ITensors: siteinds, Index
 import ITensors
 import SparseIR: Fermionic, Bosonic, FermionicFreq, valueim
@@ -32,7 +32,7 @@ end
         gtau_smpl, giv_smpl = _test_data_imaginarytime(nbit, β)
 
         sites = siteinds("Qubit", nbit)
-        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sites; cutoff=1e-20)
+        gtau_mps = Quantics.decompose_gtau(gtau_smpl, sites; cutoff=1e-20)
 
         gtau_smpl_reconst = vec(Array(reduce(*, gtau_mps), reverse(sites)...))
 
@@ -49,8 +49,8 @@ end
 
         sitesτ = [Index(2, "Qubit,τ=$n") for n in 1:nbit]
         sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
-        gtau_mps = MSSTA.decompose_gtau(gtau_smpl, sitesτ; cutoff=1e-20)
-        giv_mps = MSSTA.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ",
+        gtau_mps = Quantics.decompose_gtau(gtau_smpl, sitesτ; cutoff=1e-20)
+        giv_mps = Quantics.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ",
                               sitesdst=sitesiω)
 
         giv = vec(Array(reduce(*, giv_mps), reverse(sitesiω)...))
@@ -68,9 +68,9 @@ end
 
         sitesτ = [Index(2, "Qubit,τ=$n") for n in 1:nbit]
         sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
-        giv_mps = MSSTA.decompose_giv(giv_smpl, sitesiω; cutoff=1e-20)
+        giv_mps = Quantics.decompose_giv(giv_smpl, sitesiω; cutoff=1e-20)
 
-        gtau_mps = MSSTA.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω",
+        gtau_mps = Quantics.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω",
                                 sitesdst=sitesτ)
 
         gtau = vec(Array(reduce(*, gtau_mps), reverse(sitesτ)...))
@@ -85,7 +85,7 @@ end
         sites = siteinds("Qubit", nqubit)
         β = 10.0
         ω = 1.2
-        gtau = MSSTA.poletomps(sites, β, ω)
+        gtau = Quantics.poletomps(sites, β, ω)
         gtauvec = vec(Array(reduce(*, gtau), reverse(sites)))
         gtauf(τ) = -exp(-τ * ω) / (1 + exp(-β * ω))
         gtauref = gtauf.(LinRange(0, β, 2^nqubit + 1)[1:(end - 1)])

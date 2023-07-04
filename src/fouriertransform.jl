@@ -55,7 +55,7 @@ function _qft_nsite1_wo_norm(sites; sign::Int=1)
         arr[out, in] = _exp(out, in)
     end
 
-    M = MSSTA._zero_mpo(sites)
+    M = Quantics._zero_mpo(sites)
     _assign!(M, 1, arr)
 
     return M
@@ -111,7 +111,7 @@ function _qft_toplayer(sites; sign::Int=1)
         end
     end
 
-    M = MSSTA._zero_mpo(sites; linkdims=fill(2, N - 1))
+    M = Quantics._zero_mpo(sites; linkdims=fill(2, N - 1))
     for n in 1:N
         _assign!(M, n, tensors[n])
     end

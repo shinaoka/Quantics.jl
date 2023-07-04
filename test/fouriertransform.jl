@@ -1,5 +1,5 @@
 using Test
-using MSSTA
+using Quantics
 using ITensors
 
 # A brute-force implementation of _qft (only for tests)
@@ -29,7 +29,7 @@ end
         N = 2^nbit
 
         sites = siteinds("Qubit", nbit)
-        M = MSSTA._qft(sites; sign=sign)
+        M = Quantics._qft(sites; sign=sign)
         M_ref = _qft_ref(sites; sign=sign)
 
         @test Array(reduce(*, M), vcat(sites, sites')) ≈
@@ -62,7 +62,7 @@ end
         X_vec = Array(reduce(*, X), reverse(sitesx))
 
         # Y(k)
-        Y = MSSTA.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk,
+        Y = Quantics.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk,
                                    originsrc=originx, origindst=originy)
 
         Y_vec_ref = _ft_1d_ref(X_vec, sign, originx, originy)
@@ -101,8 +101,8 @@ end
 
         # G(kx, ky)
         # G(kx_R, ky_R, ..., kx_1, ky_1)
-        G_ = MSSTA.fouriertransform(F; sign=sign, tag="x", sitesdst=siteskx)
-        G = MSSTA.fouriertransform(G_; sign=sign, tag="y", sitesdst=sitesky)
+        G_ = Quantics.fouriertransform(F; sign=sign, tag="x", sitesdst=siteskx)
+        G = Quantics.fouriertransform(G_; sign=sign, tag="y", sitesdst=sitesky)
 
         G_mat_ref = _ft_2d_ref(F_mat, sign)
         G_mat = reshape(Array(reduce(*, G), vcat(reverse(siteskx), reverse(sitesky))), N, N)

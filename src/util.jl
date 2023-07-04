@@ -354,7 +354,7 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
         return matchsiteinds(MPO([M[n] for n in reverse(1:length(M))]), sites)
     end
 
-    MSSTA.isascendingorder(positions) ||
+    Quantics.isascendingorder(positions) ||
         error("siteinds are not in ascending order!")
 
     M_edge = addedges(M)

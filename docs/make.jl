@@ -1,13 +1,13 @@
-using MSSTA
+using Quantics
 using Documenter
 
-DocMeta.setdocmeta!(MSSTA, :DocTestSetup, :(using MSSTA); recursive=true)
+DocMeta.setdocmeta!(Quantics, :DocTestSetup, :(using Quantics); recursive=true)
 
 makedocs(;
-    modules=[MSSTA],
+    modules=[Quantics],
     authors="Hiroshi Shinaoka <h.shinaoka@gmail.com> and contributors",
-    repo="https://github.com/shinaoka/MSSTA.jl/blob/{commit}{path}#{line}",
-    sitename="MSSTA.jl",
+    repo="https://github.com/shinaoka/Quantics.jl/blob/{commit}{path}#{line}",
+    sitename="Quantics.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         assets=String[],

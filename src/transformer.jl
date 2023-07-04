@@ -180,10 +180,10 @@ Add new site indices to an MPS
 """
 function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, tag="")
     which_new ∈ ["left", "right"] || error("Invalid which_new: left or right")
-    sitepos, target_sites = MSSTA._find_target_sites(M; sitessrc=targetsites, tag=tag)
+    sitepos, target_sites = Quantics._find_target_sites(M; sitessrc=targetsites, tag=tag)
     length(sitepos) == length(newsites) ||
         error("Length mismatch: $(newsites) vs $(target_sites)")
-    M_ = MSSTA.addedges(M)
+    M_ = Quantics.addedges(M)
     links = linkinds(M_)
 
     tensors = ITensor[]
@@ -210,6 +210,6 @@ function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, ta
     tensors[end] *= onehot(links[end] => 1)
 
     M_result = MPS(tensors)
-    MSSTA.cleanup_linkinds!(M_result)
+    Quantics.cleanup_linkinds!(M_result)
     return M_result
 end

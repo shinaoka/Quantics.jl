@@ -1,5 +1,5 @@
 using Test
-import MSSTA
+import Quantics
 using ITensors
 
 @testset "util.jl" begin
@@ -10,7 +10,7 @@ using ITensors
         #@show sites
 
         sites2 = [Index(2, "n=$n") for n in 1:nbit]
-        MSSTA.replace_mpo_siteinds!(M, sites, sites2)
+        Quantics.replace_mpo_siteinds!(M, sites, sites2)
 
         @test all([!hasind(M[n], sites[n]) for n in 1:nbit])
         @test all([!hasind(M[n], sites[n]') for n in 1:nbit])
@@ -25,7 +25,7 @@ using ITensors
         csites = [Index(4, "csite=$s") for s in 1:2]
         M = randomMPS(sites; linkdims=2)
 
-        Mc = MSSTA.combinesiteinds(M, csites; targetsites=sites[2:5])
+        Mc = Quantics.combinesiteinds(M, csites; targetsites=sites[2:5])
 
         @test length(Mc) == 4
         @test all(dim.(siteinds(Mc)) .== [2, 4, 4, 2])
@@ -36,10 +36,10 @@ using ITensors
         csites = [Index(4, "csite=$s") for s in 1:(nbit ÷ 2)]
         D = 3
         mps = randomMPS(csites; linkdims=D)
-        mps_split = MSSTA.splitsiteind(mps, sites)
+        mps_split = Quantics.splitsiteind(mps, sites)
         @test vec(Array(reduce(*, mps_split), sites)) ≈ vec(Array(reduce(*, mps), csites))
 
-        mps_reconst = MSSTA.combinesiteinds(mps_split, csites)
+        mps_reconst = Quantics.combinesiteinds(mps_split, csites)
         @test vec(Array(reduce(*, mps_reconst), csites)) ≈
               vec(Array(reduce(*, mps), csites))
     end
@@ -52,7 +52,7 @@ using ITensors
 
         newsites = [[Index(2, "n=$n,m=$m") for m in 1:R] for n in 1:nsites]
 
-        mps_split = MSSTA.unfuse_siteinds(mps, sites, newsites)
+        mps_split = Quantics.unfuse_siteinds(mps, sites, newsites)
 
         newsites_flatten = collect(Iterators.flatten(newsites))
         @test newsites_flatten == siteinds(mps_split)
@@ -64,7 +64,7 @@ using ITensors
         nbit = 3
         sites = siteinds("Qubit", nbit)
         a = randomMPS(sites; linkdims=3)
-        l = MSSTA._linkinds(a, sites)
+        l = Quantics._linkinds(a, sites)
         @test all(hastags.(l, "Link"))
         @test length(l) == nbit - 1
     end
@@ -73,8 +73,8 @@ using ITensors
         nbit = 3
         sites = siteinds("Qubit", nbit)
         a = randomMPS(sites; linkdims=3)
-        MSSTA.addedges!(a)
-        l = MSSTA._linkinds(a, sites)
+        Quantics.addedges!(a)
+        l = Quantics._linkinds(a, sites)
         #@show a
         #@show l
         #@show length(l)
@@ -86,7 +86,7 @@ using ITensors
         nsite = 6
         sites = [Index(2, "Qubit, site=$n") for n in 1:nsite]
         tensor = randomITensor(sites)
-        tensors = MSSTA.split_tensor(tensor, [sites[1:2], sites[3:4], sites[5:6]])
+        tensors = Quantics.split_tensor(tensor, [sites[1:2], sites[3:4], sites[5:6]])
         @test tensor ≈ reduce(*, tensors)
     end
 
@@ -94,7 +94,7 @@ using ITensors
         nsite = 8
         sites = [Index(2, "Qubit, site=$n") for n in 1:nsite]
         tensor = randomITensor(sites)
-        tensors = MSSTA.split_tensor(tensor, [sites[1:3], sites[4:5], sites[6:8]])
+        tensors = Quantics.split_tensor(tensor, [sites[1:3], sites[4:5], sites[6:8]])
         @test length(inds(tensors[1])) == 4
         @test length(inds(tensors[2])) == 4
         @test length(inds(tensors[3])) == 4
@@ -109,7 +109,7 @@ using ITensors
         sites_sub = sites[1:2:end]
         M = randomMPS(sites_sub) + randomMPS(sites_sub)
 
-        M_ext = MSSTA.matchsiteinds(M, sites)
+        M_ext = Quantics.matchsiteinds(M, sites)
 
         tensor = Array(reduce(*, M), sites_sub)
         tensor_reconst = zeros(Float64, fill(physdim, 2N)...)
@@ -128,7 +128,7 @@ using ITensors
         sites_B = sites[2:2:end]
         M = randomMPO(sites_A) + randomMPO(sites_A)
 
-        M_ext = MSSTA.matchsiteinds(M, sites)
+        M_ext = Quantics.matchsiteinds(M, sites)
 
         tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_B])
         tensor_reconst = reduce(*, M_ext)
@@ -146,7 +146,7 @@ using ITensors
         sites_BC = vcat(sites_B, sites_C)
         M = randomMPO(sites_A) + randomMPO(sites_A)
 
-        M_ext = MSSTA.matchsiteinds(M, sites)
+        M_ext = Quantics.matchsiteinds(M, sites)
 
         tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_BC])
         tensor_reconst = reduce(*, M_ext)
@@ -155,12 +155,12 @@ using ITensors
 
     @testset "findallsites_by_tag" begin
         sites = [Index(1, "k=1"), Index(1, "x=1"), Index(1, "k=2")]
-        @test MSSTA.findallsites_by_tag(sites; tag="k") == [1, 3]
-        @test MSSTA.findallsiteinds_by_tag(sites; tag="k") == [sites[1], sites[3]]
+        @test Quantics.findallsites_by_tag(sites; tag="k") == [1, 3]
+        @test Quantics.findallsiteinds_by_tag(sites; tag="k") == [sites[1], sites[3]]
 
         sites = [Index(1, "k=2"), Index(1, "x=1"), Index(1, "k=1")]
-        @test MSSTA.findallsites_by_tag(sites; tag="k") == [3, 1]
-        @test MSSTA.findallsiteinds_by_tag(sites; tag="k") == [sites[3], sites[1]]
+        @test Quantics.findallsites_by_tag(sites; tag="k") == [3, 1]
+        @test Quantics.findallsiteinds_by_tag(sites; tag="k") == [sites[3], sites[1]]
     end
 
     @testset "combinsite" begin
@@ -172,7 +172,7 @@ using ITensors
         sites2 = sites[2:3:end]
         sites3 = sites[3:3:end]
         for n in 1:nrepeat
-            M = MSSTA.combinesites(M, sites1[n], sites2[n])
+            M = Quantics.combinesites(M, sites1[n], sites2[n])
         end
         flag = true
         for n in 1:nrepeat
@@ -187,7 +187,7 @@ using ITensors
         sites2 = siteinds("Qubit", 2)
         M1 = randomMPS(sites1)
         M2 = randomMPS(sites2)
-        M12 = MSSTA._directprod(M1, M2)
+        M12 = Quantics._directprod(M1, M2)
 
         M1_reconst = Array(reduce(*, M1), sites1)
         M2_reconst = Array(reduce(*, M2), sites2)

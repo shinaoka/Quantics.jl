@@ -1,5 +1,5 @@
 using Test
-import MSSTA
+import Quantics
 using Memoize
 
 @testset "cubature.jl" begin
@@ -7,7 +7,7 @@ using Memoize
         f(x::Float64) = x^2
         R = 30
 
-        result = MSSTA.adaptive_quadrature(Float64, f, R; tolerance=1e-12, maxbonddim=100,
+        result = Quantics.adaptive_quadrature(Float64, f, R; tolerance=1e-12, maxbonddim=100,
                                            verbosity=1)
         @test isapprox(result, 1.0 / 3.0; atol=1e-9)
     end
@@ -24,7 +24,7 @@ using Memoize
 
         R = 30
 
-        result = MSSTA.adaptive_cubature(Float64, 2, f, R; tolerance=1e-12, maxbonddim=100,
+        result = Quantics.adaptive_cubature(Float64, 2, f, R; tolerance=1e-12, maxbonddim=100,
                                          verbosity=0)
         @test isapprox(result, ref; atol=1e-8)
     end

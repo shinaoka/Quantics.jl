@@ -1,5 +1,5 @@
-name = "MSSTA"
-uuid = "24825735-5140-4dcf-98c0-6955101801e8"
+name = "Quantics"
+uuid = "87f76fb3-a40a-40c9-a63c-29fcfe7b7547"
 authors = ["Hiroshi Shinaoka <h.shinaoka@gmail.com> and contributors"]
 version = "0.1.0"
 

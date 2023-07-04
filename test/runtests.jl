@@ -1,8 +1,8 @@
 using Test
 
-#@testset "MSSTA.jl" begin
+#@testset "Quantics.jl" begin
 include("util.jl")
-include("quantics.jl")
+include("quanticsrepr.jl")
 include("binaryop.jl")
 include("fouriertransform.jl")
 include("imaginarytime.jl")

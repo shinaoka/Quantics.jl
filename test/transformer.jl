@@ -1,5 +1,5 @@
 using Test
-import MSSTA
+import Quantics
 using ITensors
 using LinearAlgebra
 
@@ -7,7 +7,7 @@ using LinearAlgebra
     @testset "upper_lower_triangle" for upper_or_lower in [:upper, :lower]
         R = 3
         sites = siteinds("Qubit", R)
-        trimat = MSSTA.upper_lower_triangle_matrix(sites, 1.0;
+        trimat = Quantics.upper_lower_triangle_matrix(sites, 1.0;
                                                    upper_or_lower=upper_or_lower)
         trimatdata = Array(reduce(*, trimat), [reverse(sites')..., reverse(sites)...])
         trimatdata = reshape(trimatdata, 2^R, 2^R)
@@ -21,8 +21,8 @@ using LinearAlgebra
     @testset "cusum" begin
         R = 3
         sites = siteinds("Qubit", R)
-        UT = MSSTA.upper_lower_triangle_matrix(sites, 1.0; upper_or_lower=:lower)
-        f = MSSTA.expqtt(sites, -1.0)
+        UT = Quantics.upper_lower_triangle_matrix(sites, 1.0; upper_or_lower=:lower)
+        f = Quantics.expqtt(sites, -1.0)
         f_values = vec(Array(reduce(*, f), reverse(sites)))
         xs = collect(LinRange(0, 1, 2^R + 1)[1:(end - 1)])
 
@@ -39,7 +39,7 @@ using LinearAlgebra
 
         g = randomMPS(rev_carrydirec ? sites : reverse(sites))
 
-        op = MSSTA.flipop(siteinds(g); rev_carrydirec=rev_carrydirec, bc=bc)
+        op = Quantics.flipop(siteinds(g); rev_carrydirec=rev_carrydirec, bc=bc)
         f = apply(op, g; alg="naive")
         g_reconst = vec(Array(reduce(*, g), reverse(sites)))
         f_reconst = vec(Array(reduce(*, f), reverse(sites)))
@@ -59,7 +59,7 @@ using LinearAlgebra
 
         g = randomMPS(sites)
 
-        f = MSSTA.reverseaxis(g; tag="x", alg="naive", bc=bc)
+        f = Quantics.reverseaxis(g; tag="x", alg="naive", bc=bc)
         g_reconst = vec(Array(reduce(*, g), reverse(sitesx)))
         f_reconst = vec(Array(reduce(*, f), reverse(sitesx)))
 
@@ -91,10 +91,10 @@ using LinearAlgebra
 
         g_reconst = _reconst(g)
 
-        fx = MSSTA.reverseaxis(g; tag="x", alg="naive")
+        fx = Quantics.reverseaxis(g; tag="x", alg="naive")
         fx_reconst = _reconst(fx)
 
-        fy = MSSTA.reverseaxis(g; tag="y", alg="naive")
+        fy = Quantics.reverseaxis(g; tag="y", alg="naive")
         fy_reconst = _reconst(fy)
 
         fx_ref = similar(fx_reconst)
@@ -133,13 +133,13 @@ using LinearAlgebra
 
         g_reconst = _reconst(g)
 
-        fx = MSSTA.reverseaxis(g; tag="x", alg="naive")
+        fx = Quantics.reverseaxis(g; tag="x", alg="naive")
         fx_reconst = _reconst(fx)
 
-        fy = MSSTA.reverseaxis(g; tag="y", alg="naive")
+        fy = Quantics.reverseaxis(g; tag="y", alg="naive")
         fy_reconst = _reconst(fy)
 
-        fz = MSSTA.reverseaxis(g; tag="z", alg="naive")
+        fz = Quantics.reverseaxis(g; tag="z", alg="naive")
         fz_reconst = _reconst(fz)
 
         fx_ref = similar(fx_reconst)
@@ -168,8 +168,8 @@ using LinearAlgebra
 
         ref = exp.(im * θ * xvec) .* f_vec
 
-        @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; tag="x"))
-        @test ref ≈ _reconst(MSSTA.phase_rotation(f, θ; targetsites=sites))
+        @test ref ≈ _reconst(Quantics.phase_rotation(f, θ; tag="x"))
+        @test ref ≈ _reconst(Quantics.phase_rotation(f, θ; targetsites=sites))
     end
 
     @testset "asdiagonal" begin
@@ -180,7 +180,7 @@ using LinearAlgebra
         M = randomMPS(sites)
 
         for which_new in ["left", "right"]
-            Mnew = MSSTA.asdiagonal(M, sites′; tag="n", which_new=which_new)
+            Mnew = Quantics.asdiagonal(M, sites′; tag="n", which_new=which_new)
 
             M_reconst = reshape(Array(reduce(*, M), reverse(sites)), 2^R)
             Mnew_reconst = reshape(Array(reduce(*, Mnew),
@@ -197,7 +197,7 @@ using LinearAlgebra
         g = randomMPS(sites)
 
         for shift in [0, 1, 2, 2^R - 1]
-            f = MSSTA.shiftaxis(g, shift; bc=bc, tag="x")
+            f = Quantics.shiftaxis(g, shift; bc=bc, tag="x")
 
             f_vec = vec(Array(reduce(*, f), reverse(sitesx)))
             g_vec = vec(Array(reduce(*, g), reverse(sitesx)))
@@ -224,7 +224,7 @@ using LinearAlgebra
         g = randomMPS(sites)
 
         for shift in [-4^R + 1, -1, 0, 1, 2^R - 1, 2^R, 2^R + 1, 4^R + 1]
-            f = MSSTA.shiftaxis(g, shift; tag="x", bc=bc)
+            f = Quantics.shiftaxis(g, shift; tag="x", bc=bc)
 
             f_mat = reshape(Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy))),
                             2^R, 2^R)

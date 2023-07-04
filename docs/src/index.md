@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = MSSTA
+CurrentModule = Quantics
 ```
 
-# MSSTA
+# Quantics
 
-Documentation for [MSSTA](https://github.com/shinaoka/MSSTA.jl).
+Documentation for [Quantics](https://github.com/shinaoka/Quantics.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [MSSTA]
+Modules = [Quantics]
 ```

@@ -1,5 +1,5 @@
 using Test
-import MSSTA
+import Quantics
 using ITensors
 
 """
@@ -21,12 +21,12 @@ end
         sitesz = [Index(2, "z=$n") for n in 1:N]
         sites1 = collect(Iterators.flatten(zip(sitesx, sitesy)))
         sites2 = collect(Iterators.flatten(zip(sitesy, sitesz)))
-        M1 = MSSTA.asMPO(randomMPS(sites1))
-        M2 = MSSTA.asMPO(randomMPS(sites2))
+        M1 = Quantics.asMPO(randomMPS(sites1))
+        M2 = Quantics.asMPO(randomMPS(sites2))
 
-        mul = MSSTA.MatrixMultiplier(sitesx, sitesy, sitesz)
+        mul = Quantics.MatrixMultiplier(sitesx, sitesy, sitesz)
 
-        M1, M2 = MSSTA.preprocess(mul, M1, M2)
+        M1, M2 = Quantics.preprocess(mul, M1, M2)
 
         flag = true
         for n in 1:N
@@ -41,7 +41,7 @@ end
         sitesx = [Index(2, "x=$n") for n in 1:N]
         sitesy = [Index(2, "y=$n") for n in 1:N]
         sitesz = [Index(2, "z=$n") for n in 1:N]
-        mul = MSSTA.MatrixMultiplier(sitesx, sitesy, sitesz)
+        mul = Quantics.MatrixMultiplier(sitesx, sitesy, sitesz)
 
         links = [Index(1, "Link,l=$l") for l in 0:N]
         M = MPO(N)
@@ -49,7 +49,7 @@ end
             M[n] = randomITensor(links[n], links[n + 1], sitesx[n], sitesz[n])
         end
 
-        M = MSSTA.postprocess(mul, M)
+        M = Quantics.postprocess(mul, M)
 
         flag = true
         for n in 1:N
@@ -64,21 +64,21 @@ end
         sitesx = [Index(2, "x=$n") for n in 1:N]
         sitesy = [Index(2, "y=$n") for n in 1:N]
         sitesz = [Index(2, "z=$n") for n in 1:N]
-        mul = MSSTA.MatrixMultiplier(sitesx, sitesy, sitesz)
+        mul = Quantics.MatrixMultiplier(sitesx, sitesy, sitesz)
 
         sites1 = collect(Iterators.flatten(zip(sitesx, sitesy)))
         sites2 = collect(Iterators.flatten(zip(sitesy, sitesz)))
-        M1 = MSSTA.asMPO(randomMPS(T, sites1))
-        M2 = MSSTA.asMPO(randomMPS(T, sites2))
+        M1 = Quantics.asMPO(randomMPS(T, sites1))
+        M2 = Quantics.asMPO(randomMPS(T, sites2))
 
         # preprocess
-        M1, M2 = MSSTA.preprocess(mul, M1, M2)
+        M1, M2 = Quantics.preprocess(mul, M1, M2)
 
         # MPO-MPO contraction
-        M = MSSTA.asMPO(contract(M1, M2; alg="naive"))
+        M = Quantics.asMPO(contract(M1, M2; alg="naive"))
 
         # postprocess
-        M = MSSTA.postprocess(mul, M)
+        M = Quantics.postprocess(mul, M)
 
         M_mat_reconst = reshape(Array(reduce(*, M), [reverse(sitesx)..., reverse(sitesz)]),
                                 2^N, 2^N)
@@ -96,21 +96,21 @@ end
     @testset "elementwisemul" for T in [Float64, ComplexF64]
         N = 5
         sites = [Index(2, "n=$n") for n in 1:N]
-        mul = MSSTA.ElementwiseMultiplier(sites)
+        mul = Quantics.ElementwiseMultiplier(sites)
 
         M1_ = randomMPS(T, sites)
         M2_ = randomMPS(T, sites)
-        M1 = MSSTA.asMPO(M1_)
-        M2 = MSSTA.asMPO(M2_)
+        M1 = Quantics.asMPO(M1_)
+        M2 = Quantics.asMPO(M2_)
 
         # preprocess
-        M1, M2 = MSSTA.preprocess(mul, M1, M2)
+        M1, M2 = Quantics.preprocess(mul, M1, M2)
 
         # MPO-MPO contraction
-        M = MSSTA.asMPO(contract(M1, M2; alg="naive"))
+        M = Quantics.asMPO(contract(M1, M2; alg="naive"))
 
         # postprocess
-        M = MSSTA.postprocess(mul, M)
+        M = Quantics.postprocess(mul, M)
 
         # Comparison with reference data
         M_reconst = Array(reduce(*, M), sites)
@@ -145,7 +145,7 @@ end
             ab_arr[:, :, k] .= a_arr[:, :, k] * b_arr[:, :, k]
         end
 
-        ab = MSSTA.automul(a, b; tag_row="x", tag_shared="y", tag_col="z", alg="fit")
+        ab = Quantics.automul(a, b; tag_row="x", tag_shared="y", tag_col="z", alg="fit")
         ab_arr_reconst = _tomat3(ab)
         @test ab_arr ≈ ab_arr_reconst
     end

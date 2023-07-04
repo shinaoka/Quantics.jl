@@ -1,11 +1,11 @@
 using Test
 using ITensors
 using StaticArrays
-import MSSTA
-import MSSTA: QuanticsInd, QubitInd, index_to_fused_quantics
-import MSSTA: fused_quantics_to_qubit, qubit_to_fused_quantics, fused_quantics_to_index,
+import Quantics
+import Quantics: QuanticsInd, QubitInd, index_to_fused_quantics
+import Quantics: fused_quantics_to_qubit, qubit_to_fused_quantics, fused_quantics_to_index,
               index_to_qubit
-import MSSTA: qubit_to_index
+import Quantics: qubit_to_index
 
 function _to_ntuple(v::MVector{N,T}) where {N,T}
     return v.data

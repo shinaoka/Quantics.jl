@@ -168,8 +168,8 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
     matmul = MatrixMultiplier(sites_row, sites_shared, sites_col)
     ewmul = ElementwiseMultiplier([s for s in siteinds(M1) if s ∉ sites_matmul])
 
-    M1_ = MSSTA.asMPO(M1)
-    M2_ = MSSTA.asMPO(M2)
+    M1_ = Quantics.asMPO(M1)
+    M2_ = Quantics.asMPO(M2)
     M1_, M2_ = preprocess(matmul, M1_, M2_)
     M1_, M2_ = preprocess(ewmul, M1_, M2_)
 
@@ -177,14 +177,14 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
         # Ideally, we want to use fitting algorithm but MPO-MPO contraction is not supported yet.
         #init = contract(truncate(M1_; cutoff=cutoff_init),
                         #truncate(M2_; cutoff=cutoff_init); alg="naive", kwargs...)
-        #M = MSSTA.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
-        M = MSSTA.asMPO(_contract_fit(M1_, M2_; kwargs...))
+        #M = Quantics.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
+        M = Quantics.asMPO(_contract_fit(M1_, M2_; kwargs...))
     elseif alg == "naive"
-        M = MSSTA.asMPO(contract(M1_, M2_; alg="naive", kwargs...))
+        M = Quantics.asMPO(contract(M1_, M2_; alg="naive", kwargs...))
     end
 
-    M = MSSTA.postprocess(matmul, M)
-    M = MSSTA.postprocess(ewmul, M)
+    M = Quantics.postprocess(matmul, M)
+    M = Quantics.postprocess(ewmul, M)
 
     if in(:maxdim, keys(kwargs))
         truncate!(M; maxdim=kwargs[:maxdim])

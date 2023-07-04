@@ -1,13 +1,13 @@
 using Test
-import MSSTA
+import Quantics
 
 @testset "grid.jl" begin
     @testset "DiscreteGrid" begin
-        m = MSSTA.InherentDiscreteGrid{3}(5)
+        m = Quantics.InherentDiscreteGrid{3}(5)
 
         for idx in [(1, 1, 1), (1, 1, 2)]
-            c = MSSTA.grididx_to_origcoord(m, idx)
-            @test MSSTA.origcoord_to_grididx(m, c) == idx
+            c = Quantics.grididx_to_origcoord(m, idx)
+            @test Quantics.origcoord_to_grididx(m, c) == idx
         end
     end
 
@@ -17,10 +17,10 @@ import MSSTA
             grid_min = 0.1
             grid_max = 2.0
             dx = (grid_max - grid_min) / 2^R
-            g = MSSTA.DiscretizedGrid{1}(R, (grid_min,), (grid_max,))
-            @test @inferred(MSSTA.origcoord_to_grididx(g, 0.999999 * dx + grid_min)) == 1
-            @test MSSTA.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
-            @test MSSTA.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
+            g = Quantics.DiscretizedGrid{1}(R, (grid_min,), (grid_max,))
+            @test @inferred(Quantics.origcoord_to_grididx(g, 0.999999 * dx + grid_min)) == 1
+            @test Quantics.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
+            @test Quantics.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
         end
 
         @testset "2D" begin
@@ -29,7 +29,7 @@ import MSSTA
             grid_min = (0.1, 0.1)
             grid_max = (2.0, 2.0)
             dx = (grid_max .- grid_min) ./ 2^R
-            g = MSSTA.DiscretizedGrid{d}(R, grid_min, grid_max)
+            g = Quantics.DiscretizedGrid{d}(R, grid_min, grid_max)
 
             cs = [
                 0.999999 .* dx .+ grid_min,
@@ -39,8 +39,8 @@ import MSSTA
             refs = [1, 2, 2^R]
 
             for (c, ref) in zip(cs, refs)
-                @inferred(MSSTA.origcoord_to_grididx(g, c))
-                @test all(MSSTA.origcoord_to_grididx(g, c) .== ref)
+                @inferred(Quantics.origcoord_to_grididx(g, c))
+                @test all(Quantics.origcoord_to_grididx(g, c) .== ref)
             end
         end
     end

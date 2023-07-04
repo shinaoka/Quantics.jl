@@ -402,7 +402,7 @@ function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Nu
     R = length(sites)
     0 <= shift <= 2^R - 1 || error("Invalid shift")
 
-    ys = MSSTA.tobin(shift, R)
+    ys = Quantics.tobin(shift, R)
 
     links = Index{T}[]
     tensors = ITensor[]
@@ -411,7 +411,7 @@ function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Nu
         cin_on = n != R
         cout_on = n != 1
         sitey = Index(2, "Qubit, y")
-        t, link_in, link_out = MSSTA._binaryop_tensor(1, 1, sites[n]', sitey, sites[n],
+        t, link_in, link_out = Quantics._binaryop_tensor(1, 1, sites[n]', sitey, sites[n],
                                                       cin_on, cout_on, bc)
         t *= onehot(sitey => ys[n] + 1)
         if n < R

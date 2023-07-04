@@ -1,6 +1,6 @@
 #__precompile__(false) 
 
-module MSSTA
+module Quantics
 
 using Distributed
 
@@ -26,7 +26,7 @@ end
 
 include("mpsedge.jl")
 include("util.jl")
-include("quantics.jl")
+include("quanticsrepr.jl")
 include("binaryop.jl")
 include("mul.jl")
 include("mps.jl")

@@ -1,7 +1,7 @@
 using Test
 using ITensors
 ITensors.disable_warn_order()
-using MSSTA
+using Quantics
 import Random
 
 @testset "binaryop.jl" begin
@@ -28,7 +28,7 @@ import Random
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             g = randomMPS(sites)
-            M = MSSTA._binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
+            M = Quantics._binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
                                     rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
             f = apply(M, g)
 
@@ -82,7 +82,7 @@ import Random
 
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             g = randomMPS(sites)
-            f = MSSTA.affinetransform(g, ["x", "y"],
+            f = Quantics.affinetransform(g, ["x", "y"],
                                       [Dict("x" => a, "y" => b), Dict("x" => c, "y" => d)],
                                       shift, [bc_x, bc_y]; cutoff=1e-25)
 
@@ -194,7 +194,7 @@ import Random
         shift = rand((-2 * 2^nbit):(2 * 2^nbit), 3)
 
         g = randomMPS(sites)
-        f = MSSTA.affinetransform(g, ["x", "y", "z"],
+        f = Quantics.affinetransform(g, ["x", "y", "z"],
                                   coeffs_dic,
                                   shift, [bc_x, bc_y, bc_z]; cutoff=1e-25)
 
@@ -233,7 +233,7 @@ import Random
         g = randomMPS(sites)
 
         for shift in [0, 1, 2, 2^R - 1]
-            M = MSSTA._shift_mpo(sites, shift; bc=bc)
+            M = Quantics._shift_mpo(sites, shift; bc=bc)
             f = apply(M, g)
 
             f_vec = vec(Array(reduce(*, f), reverse(sites)))

@@ -1,5 +1,5 @@
 using Test
-import MSSTA
+import Quantics
 using ITensors
 using ITensorTDVP
 using Random
@@ -21,12 +21,12 @@ using Random
         end
       
         M12_ref = contract(M1, M2; alg="naive")
-        M12 = MSSTA._contract_fit(M1, M2_)
+        M12 = Quantics._contract_fit(M1, M2_)
         t12_ref = Array(reduce(*, M12_ref), sites, setprime(sites, 2))
         t12 = Array(reduce(*, M12), sites, setprime(sites, 2))
         @test maximum(abs, t12 .- t12_ref) < 1e-12 * maximum(abs, t12_ref) 
 
-        M12_2 = MSSTA._contract_fit(M1, M2)
+        M12_2 = Quantics._contract_fit(M1, M2)
         t12_2 = Array(reduce(*, M12_2), sites, setprime(sites, 2))
         @test maximum(abs, t12_2 .- t12_ref) < 1e-12 * maximum(abs, t12_ref) 
     end
