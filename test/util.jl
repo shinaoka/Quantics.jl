@@ -3,14 +3,13 @@ import Quantics
 using ITensors
 
 @testset "util.jl" begin
-    @testset "replace_mpo_siteinds!" begin
+    @testset "_replace_mpo_siteinds!" begin
         nbit = 3
         sites = siteinds("Qubit", nbit)
         M = MPO(sites, ["Y" for n in 1:nbit])
-        #@show sites
 
         sites2 = [Index(2, "n=$n") for n in 1:nbit]
-        Quantics.replace_mpo_siteinds!(M, sites, sites2)
+        Quantics._replace_mpo_siteinds!(M, sites, sites2)
 
         @test all([!hasind(M[n], sites[n]) for n in 1:nbit])
         @test all([!hasind(M[n], sites[n]') for n in 1:nbit])
@@ -61,30 +60,6 @@ using ITensors
         @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈
               vec(Array(reduce(*, mps), sites))
     end
-
-    #==
-    @testset "linkinds" begin
-        nbit = 3
-        sites = siteinds("Qubit", nbit)
-        a = randomMPS(sites; linkdims=3)
-        l = Quantics._linkinds(a, sites)
-        @test all(hastags.(l, "Link"))
-        @test length(l) == nbit - 1
-    end
-
-    @testset "linkinds2" begin
-        nbit = 3
-        sites = siteinds("Qubit", nbit)
-        a = randomMPS(sites; linkdims=3)
-        Quantics.addedges!(a)
-        l = Quantics._linkinds(a, sites)
-        #@show a
-        #@show l
-        #@show length(l)
-        @test all(hastags.(l, "Link"))
-        @test length(l) == nbit + 1
-    end
-    ==#
 
     @testset "split_tensor" begin
         nsite = 6
@@ -188,7 +163,7 @@ using ITensors
         M12_reconst = Array(reduce(*, M12), vcat(sites1, sites2))
 
         M12_ref = reshape(reshape(M1_reconst, 2^2, 1) * reshape(M2_reconst, 1, 2^2), 2, 2,
-                          2, 2)
+            2, 2)
 
         @test M12_reconst ≈ M12_ref
     end

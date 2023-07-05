@@ -81,13 +81,13 @@ end
         M = Quantics.postprocess(mul, M)
 
         M_mat_reconst = reshape(Array(reduce(*, M), [reverse(sitesx)..., reverse(sitesz)]),
-                                2^N, 2^N)
+            2^N, 2^N)
 
         # Reference data
         M1_mat = reshape(Array(reduce(*, M1), [reverse(sitesx)..., reverse(sitesy)]), 2^N,
-                         2^N)
+            2^N)
         M2_mat = reshape(Array(reduce(*, M2), [reverse(sitesy)..., reverse(sitesz)]), 2^N,
-                         2^N)
+            2^N)
         M_mat_ref = M1_mat * M2_mat
 
         @test M_mat_ref ≈ M_mat_reconst

@@ -1,8 +1,4 @@
-#function _siteinds(d::Vector{T}; kwargs...) where {T<:Integer}
-#return [siteind(d[n], n; kwargs...) for n in eachindex(d)]
-#end
-
-function extractsite(x::Union{MPS,MPO}, n::Int)
+function _extractsite(x::Union{MPS,MPO}, n::Int)
     if n == 1
         return noprime(copy(uniqueind(x[n], x[n + 1])))
     elseif n == length(x)
@@ -12,9 +8,9 @@ function extractsite(x::Union{MPS,MPO}, n::Int)
     end
 end
 
-extractsites(x::Union{MPS,MPO}) = [extractsite(x, n) for n in eachindex(x)]
+_extractsites(x::Union{MPS,MPO}) = [_extractsite(x, n) for n in eachindex(x)]
 
-function replace_mpo_siteinds!(M::MPO, sites_src, sites_dst)
+function _replace_mpo_siteinds!(M::MPO, sites_src, sites_dst)
     sites_src = noprime(sites_src)
     sites_dst = noprime(sites_dst)
     for j in eachindex(M)
@@ -29,7 +25,7 @@ Reverse the order of the MPS/MPO tensors
 The order of the siteinds are reversed in the returned object.
 """
 function _reverse(M::MPO)
-    sites = extractsites(M)
+    sites = _extractsites(M)
     N = length(M)
     M_ = MPO([M[n] for n in reverse(1:length(M))])
     for n in 1:N
@@ -87,43 +83,8 @@ function maxlinkdims(inds)
     return maxdim
 end
 
-linkdims(M) = [dim(ITensors.commonind(M[n], M[n + 1])) for n in 1:(length(M) - 1)]
-
-links(M) = [ITensors.commonind(M[n], M[n + 1]) for n in 1:(length(M) - 1)]
-
-function _split(t::ITensor, csite, outerlinks, sites)
-    length(sites) == 2 || error("Length of sites must be 2")
-
-    Dleft = dim(outerlinks[1])
-    Dright = dim(outerlinks[2])
-    prod(size(t)) == 4 * Dleft * Dright || error("Length mismatch")
-    t = permute(t, [outerlinks[1], csite, outerlinks[2]])
-    sites_ = [outerlinks[1], sites..., outerlinks[2]]
-    t = ITensor(ITensors.data(t), sites_...)
-    U, S, V = svd(t, sites_[1], sites_[2])
-    SV = S * V
-    return U, SV
-end
-
-#==
-function splitsiteind(M::MPS, sites::AbstractVector{Index{T}};
-                      targetcsites=siteinds(M)) where {T}
-    !hasedge(M) || error("M must not have edges")
-    2 * length(targetcsites) == length(sites) || error("Length mismatch")
-
-    newsites = Vector{Vector{Index{T}}}(undef, length(targetcsites))
-    for n in 1:length(targetcsites)
-        newsites[n] = [sites[2n - 1], sites[2n]]
-    end
-
-    return unfuse_siteinds(M, targetcsites, newsites)
-end
-
-splitsiteinds = splitsiteind
-==#
-
 """
-Un-fuse the siteind of an MPS at the given sites
+Un-fuse the site indices of an MPS at the given sites
 
 M: Input MPS where each tensor has only one site index
 target_sites: Vector of siteinds to be split
@@ -132,7 +93,7 @@ new_sites: Vector of vectors of new siteinds
 When splitting MPS tensors, the column major is assumed.
 """
 function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
-                         newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
+    newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
     length(targetsites) == length(newsites) || error("Length mismatch")
     links = linkinds(M)
 
@@ -158,8 +119,32 @@ function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
     return MPS(collect(Iterators.flatten(tensors)))
 end
 
-#==
-function addedges!(x::MPS)
+function _removeedges!(x::MPS, sites)
+    length(inds(x[1])) == 3 || error("Dim of the first tensor must be 3")
+    length(inds(x[end])) == 3 || error("Dim of the last tensor must be 3")
+    elt = eltype(x[1])
+    x[1] *= onehot(elt, uniqueind(x[1], x[2], sites) => 1)
+    x[end] *= onehot(elt, uniqueind(x[end], x[end - 1], sites) => 1)
+    return nothing
+end
+
+function _removeedges!(x::MPO, sites)
+    length(inds(x[1])) == 4 || error("Dim of the first tensor must be 4")
+    length(inds(x[end])) == 4 || error("Dim of the last tensor must be 4")
+    elt = eltype(x[1])
+    x[1] *= onehot(elt, uniqueind(x[1], x[2], sites, prime.(sites)) => 1)
+    x[end] *= onehot(elt, uniqueind(x[end], x[end - 1], sites, prime.(sites)) => 1)
+    return nothing
+end
+
+function _removeedges!(tensors::Vector{ITensor}, sites)
+    tensors[1] *= onehot(Float64,
+        uniqueind(tensors[1], tensors[2], sites, prime.(sites)) => 1)
+    tensors[end] *= onehot(Float64,
+        uniqueind(tensors[end], tensors[end - 1], sites, prime.(sites)) => 1)
+end
+
+function _addedges!(x::MPS)
     length(inds(x[1])) == 2 || error("Dim of the first tensor must be 2")
     length(inds(x[end])) == 2 || error("Dim of the last tensor must be 2")
     linkl = Index(1, "Link,l=0")
@@ -169,7 +154,7 @@ function addedges!(x::MPS)
     return nothing
 end
 
-function addedges!(x::MPO)
+function _addedges!(x::MPO)
     length(inds(x[1])) == 3 || error("Dim of the first tensor must be 3")
     length(inds(x[end])) == 3 || error("Dim of the last tensor must be 3")
     linkl = Index(1, "Link,l=0")
@@ -177,89 +162,6 @@ function addedges!(x::MPO)
     x[1] = ITensor(ITensors.data(x[1]), [linkl, inds(x[1])...])
     x[end] = ITensor(ITensors.data(x[end]), [inds(x[end])..., linkr])
     return nothing
-end
-==#
-
-function removeedges!(x::MPS, sites)
-    length(inds(x[1])) == 3 || error("Dim of the first tensor must be 3")
-    length(inds(x[end])) == 3 || error("Dim of the last tensor must be 3")
-    elt = eltype(x[1])
-    x[1] *= onehot(elt, uniqueind(x[1], x[2], sites) => 1)
-    x[end] *= onehot(elt, uniqueind(x[end], x[end - 1], sites) => 1)
-    return nothing
-end
-
-function removeedges!(x::MPO, sites)
-    length(inds(x[1])) == 4 || error("Dim of the first tensor must be 4")
-    length(inds(x[end])) == 4 || error("Dim of the last tensor must be 4")
-    elt = eltype(x[1])
-    x[1] *= onehot(elt, uniqueind(x[1], x[2], sites, prime.(sites)) => 1)
-    x[end] *= onehot(elt, uniqueind(x[end], x[end - 1], sites, prime.(sites)) => 1)
-    return nothing
-end
-
-function removeedges!(tensors::Vector{ITensor}, sites)
-    tensors[1] *= onehot(Float64,
-                         uniqueind(tensors[1], tensors[2], sites, prime.(sites)) => 1)
-    tensors[end] *= onehot(Float64,
-                           uniqueind(tensors[end], tensors[end - 1], sites, prime.(sites)) => 1)
-end
-
-#==
-function _combinesiteinds(t1::ITensor, t2::ITensor, s1, s2, csite)
-    t = t1 * t2
-    if dim(t1) == 2
-        # Left edge
-        l = uniqueinds(inds(t), [s1, s2])
-        return ITensor(Array(t, [s1, s2, l]), [csite, l])
-    elseif dim(t2) == 2
-        # right edge
-        l = uniqueinds(inds(t), [s1, s2])
-        return ITensor(Array(t, [l, s1, s2]), [l, csite])
-    else
-        l1 = uniqueinds(inds(t), s1, s2, t2)
-        l2 = uniqueinds(inds(t), s1, s2, t1)
-        return ITensor(Array(t, [l1, s1, s2, l2]), [l1, csite, l2])
-    end
-end
-
-function _combinesiteinds(M::MPS, tsite1, tsite2, csite)
-    !hasedge(M) || error("MPS must not have edges")
-
-    sp = findsite(M, tsite1)
-    siteind(M, sp + 1) == tsite2 || error("Found wrong site")
-
-    ctensor = _combinesiteinds(M[sp], M[sp + 1], tsite1, tsite2, csite)
-    return MPS([M[1:(sp - 1)]..., ctensor, M[(sp + 2):end]...])
-end
-
-function combinesiteinds(M::MPS, csites; targetsites::Vector=siteinds(M))
-    !hasedge(M) || error("MPS must not have edges")
-    length(targetsites) == 2 * length(csites) || error("Length mismatch")
-    for n in eachindex(csites)
-        M = _combinesiteinds(M, targetsites[2 * n - 1], targetsites[2 * n], csites[n])
-    end
-    return M
-end
-==#
-
-_mklinks(dims) = [Index(dims[l], "Link,l=$l") for l in eachindex(dims)]
-
-#hasedge(M::MPS) = (length(inds(M[1])) == 3)
-
-function _linkinds(M::MPS, sites::Vector{T}) where {T}
-    N = length(M)
-    if hasedge(M)
-        links = T[]
-        push!(links, uniqueind(M[1], M[2], sites))
-        for n in 1:(N - 1)
-            push!(links, commonind(M[n], M[n + 1]))
-        end
-        push!(links, uniqueind(M[end], M[end - 1], sites))
-        return links
-    else
-        return linkinds(M)
-    end
 end
 
 """
@@ -343,6 +245,7 @@ MPO:
 For missing site indices, identity operators are inserted.
 """
 function matchsiteinds(M::Union{MPS,MPO}, sites)
+    N = length(sites)
     sites = noprime.(sites)
     positions = Int[findfirst(sites, s) for s in siteinds(M)]
     if length(M) > 1 && issorted(positions; lt=Base.isgreater)
@@ -352,11 +255,16 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     Quantics.isascendingorder(positions) ||
         error("siteinds are not in ascending order!")
 
-    M_edge = addedges(M)
+    # Add edges
+    M_ = deepcopy(M)
+    linkl = Index(1, "Link,l=0")
+    linkr = Index(1, "Link,l=$N")
+    M_[1] = ITensor(ITensors.data(M_[1]), [linkl, inds(M_[1])...])
+    M_[end] = ITensor(ITensors.data(M_[end]), [inds(M_[end])..., linkr])
 
-    linkdims_org = dim.(linkinds(M_edge))
-    linkdims_new = zeros(Int, length(sites) + 1)
-    for n in eachindex(M_edge)
+    linkdims_org = [1, dim.(linkinds(M))..., 1]
+    linkdims_new = [1, zeros(Int, N - 1)..., 1]
+    for n in eachindex(positions)
         p = positions[n]
         linkdims_new[p] = linkdims_org[n]
         linkdims_new[p + 1] = linkdims_org[n + 1]
@@ -376,23 +284,23 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     end
 
     links = [Index(linkdims_new[l], "Link,l=$(l-1)") for l in eachindex(linkdims_new)]
-    if typeof(M) == MPO
+    if M isa MPO
         tensors = [delta(links[n], links[n + 1]) * delta(sites[n], sites[n]')
                    for n in eachindex(sites)]
-    elseif typeof(M) == MPS
+    elseif M isa MPS
         tensors = [delta(links[n], links[n + 1]) * ITensor(1, sites[n])
                    for n in eachindex(sites)]
     end
 
-    links_old = linkinds(M_edge)
-    for n in eachindex(M_edge)
+    links_old = [linkl, linkinds(M)..., linkr]
+    for n in eachindex(positions)
         p = positions[n]
-        tensor = copy(M_edge[n])
+        tensor = copy(M_[n])
         replaceind!(tensor, links_old[n], links[p])
         replaceind!(tensor, links_old[n + 1], links[p + 1])
-        if typeof(M) == MPO
+        if M isa MPO
             tensors[p] = permute(tensor, [links[p], links[p + 1], sites[p], sites[p]'])
-        elseif typeof(M) == MPS
+        elseif M isa MPS
             tensors[p] = permute(tensor, [links[p], links[p + 1], sites[p]])
         end
     end
@@ -400,10 +308,8 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     tensors[1] *= onehot(links[1] => 1)
     tensors[end] *= onehot(links[end] => 1)
 
-    return MPO(tensors)
+    return typeof(M)(tensors)
 end
-
-
 
 asMPO(M::MPO) = M
 

@@ -14,8 +14,8 @@
   ``T_{x, y, \mathrm{out}, \mathrm{cin}, \mathrm{cout}} = 1`` if ``a  x + b  y + \mathrm{cin} = \mathrm{cout}``, ``=0`` otherwise (`out` is the output bit).
 """
 function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
-                          site_out::Index{T},
-                          cin_on::Bool, cout_on::Bool, bc::Int) where {T}
+    site_out::Index{T},
+    cin_on::Bool, cout_on::Bool, bc::Int) where {T}
     abs(a) <= 1 || error("a must be either 0, 1, -1")
     abs(b) <= 1 || error("b must be either 0, 1, -1")
     abs(bc) == 1 || error("bc must be either 1, -1")
@@ -47,11 +47,11 @@ end
 Create a tensor acting on a vector of sites.
 """
 function binaryop_tensor_multisite(sites::Vector{Index{T}},
-                                   coeffs::Vector{Tuple{Int,Int}},
-                                   pos_sites_in::Vector{Tuple{Int,Int}},
-                                   cin_on::Bool,
-                                   cout_on::Bool,
-                                   bc::Vector{Int}) where {T<:Number}
+    coeffs::Vector{Tuple{Int,Int}},
+    pos_sites_in::Vector{Tuple{Int,Int}},
+    cin_on::Bool,
+    cout_on::Bool,
+    bc::Vector{Int}) where {T<:Number}
 
     # Check
     sites = noprime.(sites)
@@ -76,20 +76,20 @@ function binaryop_tensor_multisite(sites::Vector{Index{T}},
 
     for n in 1:nsites
         res *= dense(delta(sites[n],
-                           [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]]))
+            [setprime(sites_in[n], plev) for plev in 1:ndumnyinds[n]]))
     end
 
     currentdummyinds = ones(Int, nsites)
     for n in 1:nsites
         sites_ab = setprime(sites_in[pos_sites_in[n][1]],
-                            currentdummyinds[pos_sites_in[n][1]]),
-                   setprime(sites_in[pos_sites_in[n][2]],
-                            currentdummyinds[pos_sites_in[n][2]])
+            currentdummyinds[pos_sites_in[n][1]]),
+        setprime(sites_in[pos_sites_in[n][2]],
+            currentdummyinds[pos_sites_in[n][2]])
         for i in 1:2
             currentdummyinds[pos_sites_in[n][i]] += 1
         end
         t, lin, lout = _binaryop_tensor(coeffs[n]..., sites_ab..., sites[n]',
-                                        cin_on, cout_on, bc[n])
+            cin_on, cout_on, bc[n])
         push!(links_in, lin)
         push!(links_out, lout)
         res *= t
@@ -122,11 +122,11 @@ where a, b, c, d = +/- 1, 0, and s1, s1 are arbitrary integers.
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
 function affinetransform(M::MPS,
-                         tags::AbstractVector{String},
-                         coeffs_dic::AbstractVector{Dict{String,Int}},
-                         shift::AbstractVector{Int},
-                         bc::AbstractVector{Int};
-                         kwargs...)
+    tags::AbstractVector{String},
+    coeffs_dic::AbstractVector{Dict{String,Int}},
+    shift::AbstractVector{Int},
+    bc::AbstractVector{Int};
+    kwargs...)
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
     #         = h(a * x + b * y,      c * x + d * y),
     # where h(x, y) = g(x + s1, y + s2).
@@ -164,10 +164,10 @@ end
 
 # Version without shift
 function affinetransform(M::MPS,
-                         tags::AbstractVector{String},
-                         coeffs_dic::AbstractVector{Dict{String,Int}},
-                         bc::AbstractVector{Int};
-                         kwargs...)
+    tags::AbstractVector{String},
+    coeffs_dic::AbstractVector{Dict{String,Int}},
+    bc::AbstractVector{Int};
+    kwargs...)
 
     # f(x, y) = g(a * x + b * y + s1, c * x + d * y + s2)
     #         = h(a * x + b * y,      c * x + d * y),
@@ -263,7 +263,7 @@ function affinetransform(M::MPS,
                        for n in eachindex(coeffs)]
     sites_mpo = collect(Iterators.flatten(Iterators.zip(sites_for_tags...)))
     transformer = _binaryop_mpo(sites_mpo, coeffs_positive, pos_sites_in;
-                                rev_carrydirec=true, bc=bc)
+        rev_carrydirec=true, bc=bc)
     transformer = matchsiteinds(transformer, sites)
     M = apply(transformer, M; kwargs...)
 
@@ -297,10 +297,10 @@ f(x_R, y_R, ..., x_1, y_1) = M(x_R, y_R, ...; x'_R, y'_R, ...) f(x'_R, y'_R, ...
 `bc` is a vector of boundary conditions for each arguments of `g` (not of `f`).
 """
 function _binaryop_mpo(sites::Vector{Index{T}},
-                       coeffs::Vector{Tuple{Int,Int}},
-                       pos_sites_in::Vector{Tuple{Int,Int}};
-                       rev_carrydirec=false,
-                       bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+    coeffs::Vector{Tuple{Int,Int}},
+    pos_sites_in::Vector{Tuple{Int,Int}};
+    rev_carrydirec=false,
+    bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
     # Number of variables involved in transformation
     nsites_bop = length(coeffs)
 
@@ -319,7 +319,7 @@ function _binaryop_mpo(sites::Vector{Index{T}},
 
     # For g->h
     M = _binaryop_mpo_backend(sites, coeffs_, pos_sites_in; rev_carrydirec=rev_carrydirec,
-                              bc=bc)
+        bc=bc)
 
     # For h->f
     for i in 1:nsites_bop
@@ -336,10 +336,10 @@ end
 
 # Limitation: a = -1 and b = -1 not supported. The same applies to (c, d).
 function _binaryop_mpo_backend(sites::Vector{Index{T}},
-                               coeffs::Vector{Tuple{Int,Int}},
-                               pos_sites_in::Vector{Tuple{Int,Int}};
-                               rev_carrydirec=false,
-                               bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
+    coeffs::Vector{Tuple{Int,Int}},
+    pos_sites_in::Vector{Tuple{Int,Int}};
+    rev_carrydirec=false,
+    bc::Union{Nothing,Vector{Int}}=nothing) where {T<:Number}
     nsites = length(sites)
     nsites_bop = length(coeffs)
     ncsites = nsites ÷ nsites_bop
@@ -360,11 +360,11 @@ function _binaryop_mpo_backend(sites::Vector{Index{T}},
         cin_on = rev_carrydirec ? (n != ncsites) : (n != 1)
         cout_on = rev_carrydirec ? (n != 1) : (n != ncsites)
         tensor = binaryop_tensor_multisite(sites_,
-                                           coeffs,
-                                           pos_sites_in,
-                                           cin_on,
-                                           cout_on,
-                                           bc)
+            coeffs,
+            pos_sites_in,
+            cin_on,
+            cout_on,
+            bc)
         lleft, lright = links[n], links[n + 1]
         if rev_carrydirec
             replaceind!(tensor, firstind(tensor, "linkout") => lleft)
@@ -383,7 +383,7 @@ function _binaryop_mpo_backend(sites::Vector{Index{T}},
         tensors = vcat(tensors, split_tensor(tensor, inds_list))
     end
 
-    removeedges!(tensors, sites)
+    _removeedges!(tensors, sites)
 
     M = truncate(MPO(tensors); cutoff=1e-25)
     cleanup_linkinds!(M)
@@ -412,7 +412,7 @@ function _shift_mpo(sites::Vector{Index{T}}, shift::Int; bc::Int=1) where {T<:Nu
         cout_on = n != 1
         sitey = Index(2, "Qubit, y")
         t, link_in, link_out = Quantics._binaryop_tensor(1, 1, sites[n]', sitey, sites[n],
-                                                      cin_on, cout_on, bc)
+            cin_on, cout_on, bc)
         t *= onehot(sitey => ys[n] + 1)
         if n < R
             push!(links, Index(dim(link_in), "link=$n"))

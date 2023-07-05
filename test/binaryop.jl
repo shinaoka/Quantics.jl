@@ -29,7 +29,7 @@ import Random
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             g = randomMPS(sites)
             M = Quantics._binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
-                                    rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
+                rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
             f = apply(M, g)
 
             # f[x_R, ..., x_1, y_R, ..., y_1] and f[x, y]
@@ -83,8 +83,8 @@ import Random
         for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
             g = randomMPS(sites)
             f = Quantics.affinetransform(g, ["x", "y"],
-                                      [Dict("x" => a, "y" => b), Dict("x" => c, "y" => d)],
-                                      shift, [bc_x, bc_y]; cutoff=1e-25)
+                [Dict("x" => a, "y" => b), Dict("x" => c, "y" => d)],
+                shift, [bc_x, bc_y]; cutoff=1e-25)
 
             # f[x_R, ..., x_1, y_R, ..., y_1] and f[x, y]
             f_arr = Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy)))
@@ -142,9 +142,9 @@ import Random
     push!(affinetransform_testsets, [0 1 -1; 0 1 0; 1 0 0])
 
     @testset "affinetransform_three_vars" for rev_carrydirec in [true, false],
-                                              bc_x in [1, -1], bc_y in [1, -1],
-                                              bc_z in [1, -1], nbit in 2:3,
-                                              affmat in affinetransform_testsets
+        bc_x in [1, -1], bc_y in [1, -1],
+        bc_z in [1, -1], nbit in 2:3,
+        affmat in affinetransform_testsets
         #@testset "affinetransform_three_var" for rev_carrydirec in [true], bc_x in [1], bc_y in [1], bc_z in [1], nbit in [2], affmat in affinetransform_testsets
         Random.seed!(1234)
         varnames = ["x", "y", "z", "K"] # "K" is not involved in transform
@@ -195,19 +195,19 @@ import Random
 
         g = randomMPS(sites)
         f = Quantics.affinetransform(g, ["x", "y", "z"],
-                                  coeffs_dic,
-                                  shift, [bc_x, bc_y, bc_z]; cutoff=1e-25)
+            coeffs_dic,
+            shift, [bc_x, bc_y, bc_z]; cutoff=1e-25)
 
         # f[x_R, ..., x_1, y_R, ..., y_1, z_R, ..., z_1] and f[x, y, z]
         f_arr = Array(reduce(*, f),
-                      vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz),
-                           reverse(sitesK)))
+            vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz),
+                reverse(sitesK)))
         f_vec = reshape(f_arr, 2^nbit, 2^nbit, 2^nbit, 2^nbit)
 
         # g[x'_R, ..., x'_1, y'_R, ..., y'_1, z'_R, ..., z'_1] and g[x', y', z']
         g_arr = Array(reduce(*, g),
-                      vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz),
-                           reverse(sitesK)))
+            vcat(reverse(sitesx), reverse(sitesy), reverse(sitesz),
+                reverse(sitesK)))
         g_vec = reshape(g_arr, 2^nbit, 2^nbit, 2^nbit, 2^nbit)
 
         function prime_xy(x, y, z)

@@ -17,23 +17,23 @@ _stat_sign(::Fermionic) = -1
 _stat_sign(::Bosonic) = 1
 
 function to_wn(stat::Statistics, gtau::MPS, beta::Float64; sitessrc=nothing, tag="",
-               sitesdst=nothing, kwargs...)::MPS
+    sitesdst=nothing, kwargs...)::MPS
     sitepos, _ = _find_target_sites(gtau; sitessrc=sitessrc, tag=tag)
     nqbit_t = length(sitepos)
     originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
     giv = fouriertransform(gtau; tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
-                           origindst=originwn)
+        origindst=originwn)
     giv *= (beta * 2^(-nqbit_t / 2))
     return giv
 end
 
 function to_tau(stat::Statistics, giv::MPS, beta::Float64; sitessrc=nothing, tag="",
-                sitesdst=nothing, kwargs...)::MPS
+    sitesdst=nothing, kwargs...)::MPS
     sitepos, _ = _find_target_sites(giv; sitessrc=sitessrc, tag=tag)
     nqbit_t = length(sitepos)
     originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
     gtau = fouriertransform(giv; sign=-1, tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
-                            originsrc=originwn)
+        originsrc=originwn)
     gtau *= ((2^(nqbit_t / 2)) / beta)
     return gtau
 end
@@ -72,7 +72,7 @@ function poletomps(stat::Statistics, sites, β, ω)
     tensors = ITensor[]
     for n in 1:nqubits
         push!(tensors,
-              ITensor([1.0, exp(-(0.5^n) * β * ω)], links[n], links[n + 1], sites[n]))
+            ITensor([1.0, exp(-(0.5^n) * β * ω)], links[n], links[n + 1], sites[n]))
     end
     tensors[1] *= -1 / (1 - _stat_sign(stat) * exp(-β * ω))
     tensors[1] *= onehot(links[1] => 1)

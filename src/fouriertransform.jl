@@ -29,7 +29,7 @@ function _qft(sites; cutoff::Float64=1e-14, sign::Int=1)
     # Quick hack: In the Markus's note,
     # the digits are ordered oppositely from the present convention.
     M = MPO([M[n] for n in length(M):-1:1])
-    replace_mpo_siteinds!(M, reverse(sites), sites)
+    _replace_mpo_siteinds!(M, reverse(sites), sites)
 
     return M
 end
@@ -162,18 +162,18 @@ sign = 1
 """
 function forwardmpo(ftcore::FTCore, sites)
     M = copy(ftcore.forward)
-    replace_mpo_siteinds!(M, extractsites(M), sites)
+    _replace_mpo_siteinds!(M, _extractsites(M), sites)
     return M
 end
 
 function backwardmpo(ftcore::FTCore, sites)
     M = conj(MPO(reverse([x for x in ftcore.forward])))
-    replace_mpo_siteinds!(M, extractsites(M), sites)
+    _replace_mpo_siteinds!(M, _extractsites(M), sites)
     return M
 end
 
 function _apply_qft(M::MPO, gsrc::MPS, target_sites, sitepos, sitesdst; kwargs...)
-    replace_mpo_siteinds!(M, extractsites(M), target_sites)
+    _replace_mpo_siteinds!(M, _extractsites(M), target_sites)
     M = matchsiteinds(M, siteinds(gsrc))
     gdst = ITensors.apply(M, gsrc; kwargs...)
 
@@ -209,13 +209,13 @@ Instead of specifying `sitessrc`, one can specify the source sites by setting `t
 If `tag` = `x`, all sites with tags `x=1`, `x=2`, ... are used as `sitessrc`.
 """
 function fouriertransform(M::MPS;
-                          sign::Int=1,
-                          tag::String="",
-                          sitessrc=nothing,
-                          sitesdst=nothing,
-                          originsrc::Float64=0.0,
-                          origindst::Float64=0.0,
-                          cutoff_MPO=1e-25, kwargs...)
+    sign::Int=1,
+    tag::String="",
+    sitessrc=nothing,
+    sitesdst=nothing,
+    originsrc::Float64=0.0,
+    origindst::Float64=0.0,
+    cutoff_MPO=1e-25, kwargs...)
     sites = siteinds(M)
     sitepos, target_sites = _find_target_sites(M; sitessrc=sitessrc, tag=tag)
 
@@ -233,7 +233,7 @@ function fouriertransform(M::MPS;
 
     # Phase shift from origindst
     M_result = phase_rotation(M, sign * 2π * origindst / (2.0^length(sitepos));
-                              targetsites=target_sites)
+        targetsites=target_sites)
 
     # Apply QFT
     M_result = apply(MQ, M_result; kwargs...)
@@ -245,7 +245,7 @@ function fouriertransform(M::MPS;
 
     # Phase shift from originsrc
     M_result = phase_rotation(M_result, sign * 2π * originsrc / (2.0^length(sitepos));
-                              targetsites=sitesdst)
+        targetsites=sitesdst)
 
     M_result *= exp(sign * im * 2π * originsrc * origindst / 2.0^length(sitepos))
 

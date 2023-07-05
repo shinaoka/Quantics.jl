@@ -77,9 +77,11 @@ Convert fused quantics indices to qubit indices
 
 QuanticsInd{2}.([1, 2, 3, 4]) => QubitInd.([1, 1,  2, 1,  1, 2,  2, 2])
 """
-function fused_quantics_to_qubit(indices::AbstractVector{QuanticsInd{N}})::Vector{QubitInd
-                                                                                  } where {N
-                                                                                           }
+function fused_quantics_to_qubit(indices::AbstractVector{
+    QuanticsInd{N}
+})::Vector{QubitInd
+} where {N
+}
     return collect(Iterators.flatten(fused_quantics_to_qubit.(indices)))
 end
 
@@ -87,8 +89,8 @@ end
 Convert qubit indices to fused quantics indices
 """
 function qubit_to_fused_quantics(::Val{D},
-                                 indices::AbstractVector{QubitInd})::Vector{QuanticsInd{D}
-                                                                            } where {D}
+    indices::AbstractVector{QubitInd})::Vector{QuanticsInd{D}
+} where {D}
     indices_ = reshape(indices, D, :)
     nquantics = size(indices_, 2)
     return collect(QuanticsInd{D}(Tuple(indices_[:, n])) for n in 1:nquantics)
@@ -114,7 +116,7 @@ Fused quantics indices
 function index_to_fused_quantics(indices::NTuple{D,Int}, R::Int) where {D}
     qubit_strings = index_to_qubit.(indices, R)
     return qubit_to_fused_quantics(Val(D),
-                                   collect(Iterators.flatten(zip(qubit_strings...))))
+        collect(Iterators.flatten(zip(qubit_strings...))))
 end
 
 """

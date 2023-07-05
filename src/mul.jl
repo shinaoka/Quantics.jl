@@ -9,23 +9,23 @@ struct MatrixMultiplier{T} <: AbstractMultiplier where {T}
     sites_col::Vector{Index{T}}
 
     function MatrixMultiplier(sites_row::Vector{Index{T}},
-                              sites_shared::Vector{Index{T}},
-                              sites_col::Vector{Index{T}}) where {T}
+        sites_shared::Vector{Index{T}},
+        sites_col::Vector{Index{T}}) where {T}
         new{T}(sites_row, sites_shared, sites_col)
     end
 end
 
 function MatrixMultiplier(site_row::Index{T},
-                          site_shared::Index{T},
-                          site_col::Index{T}) where {T}
+    site_shared::Index{T},
+    site_col::Index{T}) where {T}
     return MatrixMultiplier([site_row], [site_shared], [site_col])
 end
 
 function preprocess(mul::MatrixMultiplier{T}, M1::MPO, M2::MPO) where {T}
     for (site_row, site_shared, site_col) in zip(mul.sites_row, mul.sites_shared,
-                                                 mul.sites_col)
+        mul.sites_col)
         M1, M2 = combinesites(M1, site_row, site_shared),
-                 combinesites(M2, site_col, site_shared)
+        combinesites(M2, site_col, site_shared)
     end
     return M1, M2
 end
@@ -149,12 +149,10 @@ end
 By default, elementwise multiplication will be performed.
 """
 function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
-                 tag_col::String="", alg="naive", kwargs...)
-
-     if in(:maxbonddim, keys(kwargs))
-         error("Illegal keyward parameter: maxbonddim. Use maxdim instead!")
-     end
- 
+    tag_col::String="", alg="naive", kwargs...)
+    if in(:maxbonddim, keys(kwargs))
+        error("Illegal keyward parameter: maxbonddim. Use maxdim instead!")
+    end
 
     sites_row = findallsiteinds_by_tag(siteinds(M1); tag=tag_row)
     sites_shared = findallsiteinds_by_tag(siteinds(M1); tag=tag_shared)
@@ -176,7 +174,7 @@ function automul(M1::MPS, M2::MPS; tag_row::String="", tag_shared::String="",
     if alg == "fit"
         # Ideally, we want to use fitting algorithm but MPO-MPO contraction is not supported yet.
         #init = contract(truncate(M1_; cutoff=cutoff_init),
-                        #truncate(M2_; cutoff=cutoff_init); alg="naive", kwargs...)
+        #truncate(M2_; cutoff=cutoff_init); alg="naive", kwargs...)
         #M = Quantics.asMPO(contract(M1_, M2_; alg="fit", init=init, kwargs...))
         M = Quantics.asMPO(_contract_fit(M1_, M2_; kwargs...))
     elseif alg == "naive"

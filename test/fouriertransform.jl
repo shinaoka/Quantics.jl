@@ -50,7 +50,7 @@ end
     end
 
     @testset "fouriertransform_1d" for sign in [1, -1], nbit in [2, 3, 4], originx in [0.1],
-                                       originy in [-0.2]
+        originy in [-0.2]
 
         N = 2^nbit
 
@@ -63,7 +63,7 @@ end
 
         # Y(k)
         Y = Quantics.fouriertransform(X; sign=sign, tag="x", sitesdst=sitesk,
-                                   originsrc=originx, origindst=originy)
+            originsrc=originx, origindst=originy)
 
         Y_vec_ref = _ft_1d_ref(X_vec, sign, originx, originy)
         Y_vec = vec(Array(reduce(*, Y), reverse(sitesk)))

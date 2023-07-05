@@ -8,7 +8,7 @@ using LinearAlgebra
         R = 3
         sites = siteinds("Qubit", R)
         trimat = Quantics.upper_lower_triangle_matrix(sites, 1.0;
-                                                   upper_or_lower=upper_or_lower)
+            upper_or_lower=upper_or_lower)
         trimatdata = Array(reduce(*, trimat), [reverse(sites')..., reverse(sites)...])
         trimatdata = reshape(trimatdata, 2^R, 2^R)
 
@@ -120,14 +120,14 @@ using LinearAlgebra
             sites = collect(Iterators.flatten(zip(sitesx, sitesy, sitesz)))
         else
             sites = collect(Iterators.flatten(zip(reverse(sitesx), reverse(sitesy),
-                                                  reverse(sitesz))))
+                reverse(sitesz))))
         end
 
         g = randomMPS(sites)
 
         function _reconst(M)
             arr = Array(reduce(*, M),
-                        [reverse(sitesx)..., reverse(sitesy)..., reverse(sitesz)...])
+                [reverse(sitesx)..., reverse(sitesy)..., reverse(sitesz)...])
             return reshape(arr, N, N, N)
         end
 
@@ -172,6 +172,7 @@ using LinearAlgebra
         @test ref ≈ _reconst(Quantics.phase_rotation(f, θ; targetsites=sites))
     end
 
+    #==
     @testset "asdiagonal" begin
         R = 2
         sites = siteinds("Qubit", R)
@@ -190,6 +191,7 @@ using LinearAlgebra
             @assert LinearAlgebra.diagm(M_reconst) ≈ Mnew_reconst
         end
     end
+    ==#
 
     @testset "shiftaxis" for R in [3], bc in [1, -1], rev_carrydirec in [true, false]
         sitesx = [Index(2, "Qubit, x=$n") for n in 1:R]
@@ -227,9 +229,9 @@ using LinearAlgebra
             f = Quantics.shiftaxis(g, shift; tag="x", bc=bc)
 
             f_mat = reshape(Array(reduce(*, f), vcat(reverse(sitesx), reverse(sitesy))),
-                            2^R, 2^R)
+                2^R, 2^R)
             g_mat = reshape(Array(reduce(*, g), vcat(reverse(sitesx), reverse(sitesy))),
-                            2^R, 2^R)
+                2^R, 2^R)
 
             f_mat_ref = similar(f_mat)
             for i in 1:(2^R)

@@ -2,7 +2,6 @@
 # A valid tag should not contain "=".
 _valid_tag(tag::String)::Bool = !occursin("=", tag)
 
-
 """
 Find sites with the given tag
 
@@ -13,7 +12,7 @@ If not, the function seach for all Index objects with tags `x=1`, `x=2`, ..., an
 If no Index object is found, an empty vector will be returned.
 """
 function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="x",
-                             maxnsites::Int=1000)::Vector{Int} where {T}
+    maxnsites::Int=1000)::Vector{Int} where {T}
     _valid_tag(tag) || error("Invalid tag: $tag")
     result = Int[]
     for n in 1:maxnsites
@@ -22,7 +21,7 @@ function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="x",
         if length(idx) == 0
             break
         elseif length(idx) > 1
-            error("Found more than one siteind with $(tag_)!")
+            error("Found more than one site indices with $(tag_)!")
         end
         push!(result, idx[1])
     end

@@ -51,7 +51,7 @@ end
         sitesiω = [Index(2, "Qubit,iω=$n") for n in 1:nbit]
         gtau_mps = Quantics.decompose_gtau(gtau_smpl, sitesτ; cutoff=1e-20)
         giv_mps = Quantics.to_wn(Fermionic(), gtau_mps, β; cutoff=1e-20, tag="τ",
-                              sitesdst=sitesiω)
+            sitesdst=sitesiω)
 
         giv = vec(Array(reduce(*, giv_mps), reverse(sitesiω)...))
 
@@ -71,7 +71,7 @@ end
         giv_mps = Quantics.decompose_giv(giv_smpl, sitesiω; cutoff=1e-20)
 
         gtau_mps = Quantics.to_tau(Fermionic(), giv_mps, β; cutoff=1e-20, tag="iω",
-                                sitesdst=sitesτ)
+            sitesdst=sitesτ)
 
         gtau = vec(Array(reduce(*, gtau_mps), reverse(sitesτ)...))
 

@@ -19,7 +19,7 @@ f(x) = g(-x)
 where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 """
 function flipop_to_negativedomain(sites::Vector{Index{T}}; rev_carrydirec=false,
-                                  bc::Int=1)::MPO where {T}
+    bc::Int=1)::MPO where {T}
     return flipop(sites; rev_carrydirec=rev_carrydirec, bc=bc) * bc
 end
 
@@ -146,7 +146,7 @@ end
 Create QTT for a upper/lower triangle matrix filled with one except the diagonal line
 """
 function upper_lower_triangle_matrix(sites::Vector{Index{T}}, value::S;
-                                     upper_or_lower::Symbol=:upper)::MPO where {T,S}
+    upper_or_lower::Symbol=:upper)::MPO where {T,S}
     upper_or_lower ∈ [:upper, :lower] || error("Invalid upper_or_lower $(upper_or_lower)")
     N = length(sites)
 
@@ -178,12 +178,13 @@ end
 """
 Add new site indices to an MPS
 """
+#==
 function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, tag="")
     which_new ∈ ["left", "right"] || error("Invalid which_new: left or right")
     sitepos, target_sites = Quantics._find_target_sites(M; sitessrc=targetsites, tag=tag)
     length(sitepos) == length(newsites) ||
         error("Length mismatch: $(newsites) vs $(target_sites)")
-    M_ = Quantics.addedges(M)
+    M_ = Quantics._addedges(M)
     links = linkinds(M_)
 
     tensors = ITensor[]
@@ -213,3 +214,4 @@ function asdiagonal(M::MPS, newsites; which_new="right", targetsites=nothing, ta
     Quantics.cleanup_linkinds!(M_result)
     return M_result
 end
+==#
