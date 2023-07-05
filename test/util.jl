@@ -18,6 +18,7 @@ using ITensors
         @test all([hasind(M[n], sites2[n]') for n in 1:nbit])
     end
 
+    #==
     @testset "combinesiteinds" begin
         # [s1, (s2,s3), (s4,s5), s6]
         nbit = 6
@@ -43,6 +44,7 @@ using ITensors
         @test vec(Array(reduce(*, mps_reconst), csites)) ≈
               vec(Array(reduce(*, mps), csites))
     end
+    ==#
 
     @testset "unfuse_siteinds" for nsites in [2, 4], R in [2, 3]
         sites = [Index(2^R, "csite=$s") for s in 1:nsites]
@@ -60,6 +62,7 @@ using ITensors
               vec(Array(reduce(*, mps), sites))
     end
 
+    #==
     @testset "linkinds" begin
         nbit = 3
         sites = siteinds("Qubit", nbit)
@@ -81,6 +84,7 @@ using ITensors
         @test all(hastags.(l, "Link"))
         @test length(l) == nbit + 1
     end
+    ==#
 
     @testset "split_tensor" begin
         nsite = 6
@@ -151,16 +155,6 @@ using ITensors
         tensor_ref = reduce(*, M) * reduce(*, [delta(s, s') for s in sites_BC])
         tensor_reconst = reduce(*, M_ext)
         @test tensor_ref ≈ tensor_reconst
-    end
-
-    @testset "findallsites_by_tag" begin
-        sites = [Index(1, "k=1"), Index(1, "x=1"), Index(1, "k=2")]
-        @test Quantics.findallsites_by_tag(sites; tag="k") == [1, 3]
-        @test Quantics.findallsiteinds_by_tag(sites; tag="k") == [sites[1], sites[3]]
-
-        sites = [Index(1, "k=2"), Index(1, "x=1"), Index(1, "k=1")]
-        @test Quantics.findallsites_by_tag(sites; tag="k") == [3, 1]
-        @test Quantics.findallsiteinds_by_tag(sites; tag="k") == [sites[3], sites[1]]
     end
 
     @testset "combinsite" begin

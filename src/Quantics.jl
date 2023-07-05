@@ -29,6 +29,7 @@ end
 
 include("mpsedge.jl")
 include("util.jl")
+include("tag.jl")
 include("quanticsrepr.jl")
 include("binaryop.jl")
 include("mul.jl")

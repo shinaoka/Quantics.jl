@@ -96,10 +96,6 @@ function _split(t::ITensor, csite, outerlinks, sites)
 
     Dleft = dim(outerlinks[1])
     Dright = dim(outerlinks[2])
-    #prod(size(t)) == 4 * Dleft * Dright || @show t
-    #prod(size(t)) == 4 * Dleft * Dright || @show csite
-    #prod(size(t)) == 4 * Dleft * Dright || @show outerlinks
-    #prod(size(t)) == 4 * Dleft * Dright || @show sites
     prod(size(t)) == 4 * Dleft * Dright || error("Length mismatch")
     t = permute(t, [outerlinks[1], csite, outerlinks[2]])
     sites_ = [outerlinks[1], sites..., outerlinks[2]]
@@ -109,16 +105,7 @@ function _split(t::ITensor, csite, outerlinks, sites)
     return U, SV
 end
 
-function _splitsiteind(M::MPS, sites, s1, s2, csite)
-    hasedge(M) || error("M must have edges")
-
-    n = findsite(M, csite)
-    l = _linkinds(M, sites)
-    tensors = _split(M[n], csite, l[n:(n + 1)], [s1, s2])
-    return MPS([M[1:(n - 1)]..., tensors..., M[(n + 1):end]...]),
-           [sites[1:(n - 1)]..., s1, s2, sites[(n + 1):end]...]
-end
-
+#==
 function splitsiteind(M::MPS, sites::AbstractVector{Index{T}};
                       targetcsites=siteinds(M)) where {T}
     !hasedge(M) || error("M must not have edges")
@@ -133,11 +120,13 @@ function splitsiteind(M::MPS, sites::AbstractVector{Index{T}};
 end
 
 splitsiteinds = splitsiteind
+==#
 
 """
-Un-fuse the siteind of a MPS at the given sites
+Un-fuse the siteind of an MPS at the given sites
 
-target_sites: Vector of siteinds to split
+M: Input MPS where each tensor has only one site index
+target_sites: Vector of siteinds to be split
 new_sites: Vector of vectors of new siteinds
 
 When splitting MPS tensors, the column major is assumed.
@@ -169,6 +158,7 @@ function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
     return MPS(collect(Iterators.flatten(tensors)))
 end
 
+#==
 function addedges!(x::MPS)
     length(inds(x[1])) == 2 || error("Dim of the first tensor must be 2")
     length(inds(x[end])) == 2 || error("Dim of the last tensor must be 2")
@@ -188,6 +178,7 @@ function addedges!(x::MPO)
     x[end] = ITensor(ITensors.data(x[end]), [inds(x[end])..., linkr])
     return nothing
 end
+==#
 
 function removeedges!(x::MPS, sites)
     length(inds(x[1])) == 3 || error("Dim of the first tensor must be 3")
@@ -214,6 +205,7 @@ function removeedges!(tensors::Vector{ITensor}, sites)
                            uniqueind(tensors[end], tensors[end - 1], sites, prime.(sites)) => 1)
 end
 
+#==
 function _combinesiteinds(t1::ITensor, t2::ITensor, s1, s2, csite)
     t = t1 * t2
     if dim(t1) == 2
@@ -249,10 +241,11 @@ function combinesiteinds(M::MPS, csites; targetsites::Vector=siteinds(M))
     end
     return M
 end
+==#
 
 _mklinks(dims) = [Index(dims[l], "Link,l=$l") for l in eachindex(dims)]
 
-hasedge(M::MPS) = (length(inds(M[1])) == 3)
+#hasedge(M::MPS) = (length(inds(M[1])) == 3)
 
 function _linkinds(M::MPS, sites::Vector{T}) where {T}
     N = length(M)
@@ -270,7 +263,9 @@ function _linkinds(M::MPS, sites::Vector{T}) where {T}
 end
 
 """
-Decompose a tensor into a set of indices by QR
+Decompose the given tensor into as the product of tensors by QR
+
+The externel indices of the results tensors are specified by `inds_list`.
 """
 function split_tensor(tensor::ITensor, inds_list::Vector{Vector{Index{T}}}) where {T}
     inds_list = deepcopy(inds_list)
@@ -304,7 +299,7 @@ function cleanup_linkinds!(M)
 end
 
 """
-To digits
+To bits
 """
 function tobin!(x::Int, xbin::Vector{Int})
     nbit = length(xbin)
@@ -408,47 +403,7 @@ function matchsiteinds(M::Union{MPS,MPO}, sites)
     return MPO(tensors)
 end
 
-#==
-function _findtag(tag, sites::Vector{Index{T}}; only=true) where {T}
-    idx = findall(hastags(tag), sites)
-    if length(idx) == 0
-        error("Not siteind with tag $tag found")
-    elseif length(idx) > 1
-        error("More than one siteind with tag $tag found")
-    end
-    return idx[1]
-end
-==#
 
-"""
-Find sites with the given tag
-
-For tag = `x`, if `sites` contains an Index object with `x`, the function returns a vector containing only its positon.
-
-If not, the function seach for all Index objects with tags `x=1`, `x=2`, ..., and return their positions.
-
-If no Index object is found, an empty vector will be returned.
-"""
-function findallsites_by_tag(sites::Vector{Index{T}}; tag::String="x",
-                             maxnsites::Int=1000)::Vector{Int} where {T}
-    result = Int[]
-    for n in 1:maxnsites
-        tag_ = tag * "=$n"
-        idx = findall(hastags(tag_), sites)
-        if length(idx) == 0
-            break
-        elseif length(idx) > 1
-            error("More siteinds with $(tag_) than one found")
-        end
-        push!(result, idx[1])
-    end
-    return result
-end
-
-function findallsiteinds_by_tag(sites; tag::String="x", maxnsites::Int=1000)
-    positions = findallsites_by_tag(sites; tag=tag, maxnsites=maxnsites)
-    return [sites[p] for p in positions]
-end
 
 asMPO(M::MPO) = M
 

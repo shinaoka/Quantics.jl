@@ -2,6 +2,7 @@ using Test
 
 #@testset "Quantics.jl" begin
 include("util.jl")
+include("tag.jl")
 include("quanticsrepr.jl")
 include("binaryop.jl")
 include("fouriertransform.jl")
