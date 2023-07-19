@@ -1,3 +1,5 @@
+# Only temporary, until the performance issune in ITensorNetworks.jl is fixed.
+
 """
 Contract M1 and M2, and return the result as an MPO.
 """

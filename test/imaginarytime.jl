@@ -91,4 +91,16 @@ end
         gtauref = gtauf.(LinRange(0, β, 2^nqubit + 1)[1:(end - 1)])
         @test maximum(abs, gtauref .- gtauvec) < 1e-14
     end
+
+    @testset "poletomps_negative_pole" begin
+        nqubit = 16
+        sites = siteinds("Qubit", nqubit)
+        β = 1000.0
+        ω = -10.0
+        gtau = Quantics.poletomps(Fermionic(), sites, β, ω)
+        gtauvec = vec(Array(reduce(*, gtau), reverse(sites)))
+        gtauf(τ) = -exp((β-τ) * ω)
+        gtauref = gtauf.(LinRange(0, β, 2^nqubit + 1)[1:(end - 1)])
+        @test maximum(abs, gtauref .- gtauvec) < 1e-14
+    end
 end

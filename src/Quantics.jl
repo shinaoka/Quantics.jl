@@ -2,7 +2,6 @@
 
 module Quantics
 
-using Distributed
 
 #@everywhere begin
 #using Pkg
@@ -18,7 +17,6 @@ using ITensorTDVP
 import SparseIR: Fermionic, Bosonic, Statistics
 import LinearAlgebra: I
 using StaticArrays
-using Memoize
 
 using TensorCrossInterpolation
 import TensorCrossInterpolation: TensorCI, CachedFunction, TensorCI2

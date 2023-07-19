@@ -97,7 +97,7 @@ Convert a coordinate in the original coordinate system to the corresponding grid
 """
 function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
     all(grid_min(g) .<= coordinate .< g.grid_max) ||
-        throw(BoundsError(coordinate, grid_min(g), grid_max(g)))
+        error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
     return ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int
 end
 
