@@ -96,27 +96,41 @@ function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
     newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
     length(targetsites) == length(newsites) || error("Length mismatch")
     links = linkinds(M)
+    L = length(M)
 
-    tensors = Any[M[n] for n in eachindex(M)]
+    tensors = Union{ITensor,Vector{ITensor}}[M[n] for n in eachindex(M)]
     for n in 1:length(targetsites)
         pos = findsite(M, targetsites[n])
-        pos == n || error("Target site not found")
+        !isnothing(pos) || error("Target site not found: $(targetsites[n])")
 
         newinds = [[s] for s in newsites[n]]
         links_ = Index{T}[]
-        if n > 1
-            push!(links_, links[n - 1])
-            push!(newinds[1], links[n - 1])
+        if pos > 1
+            push!(links_, links[pos - 1])
+            push!(newinds[1], links[pos - 1])
         end
-        if n < length(targetsites)
-            push!(links_, links[n])
-            push!(newinds[end], links[n])
+        if pos < L
+            push!(links_, links[pos])
+            push!(newinds[end], links[pos])
         end
         tensor_data = ITensors.data(permute(copy(M[pos]), targetsites[n], links_...))
-        tensors[n] = split_tensor(ITensor(tensor_data, newsites[n]..., links_...), newinds)
+        tensors[pos] = split_tensor(ITensor(tensor_data, newsites[n]..., links_...), newinds)
     end
 
-    return MPS(collect(Iterators.flatten(tensors)))
+    tensors_ = ITensor[]
+    for t in tensors
+        if t isa ITensor
+            push!(tensors_, t)
+        elseif t isa Vector{ITensor}
+            for t_ in t
+                push!(tensors_, t_)
+            end
+        end
+    end
+
+    M_ = MPS(tensors_)
+    cleanup_linkinds!(M_)
+    return M_
 end
 
 function _removeedges!(x::MPS, sites)
