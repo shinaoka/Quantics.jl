@@ -22,7 +22,7 @@ function to_wn(stat::Statistics, gtau::MPS, beta::Float64; sitessrc=nothing, tag
     nqbit_t = length(sitepos)
     originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
     giv = fouriertransform(gtau; tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
-        origindst=originwn)
+        origindst=originwn, kwargs...)
     giv *= (beta * 2^(-nqbit_t / 2))
     return giv
 end
@@ -33,7 +33,7 @@ function to_tau(stat::Statistics, giv::MPS, beta::Float64; sitessrc=nothing, tag
     nqbit_t = length(sitepos)
     originwn = 0.5 * (-2.0^nqbit_t + _stat_shift(stat))
     gtau = fouriertransform(giv; sign=-1, tag=tag, sitessrc=sitessrc, sitesdst=sitesdst,
-        originsrc=originwn)
+        originsrc=originwn, kwargs...)
     gtau *= ((2^(nqbit_t / 2)) / beta)
     return gtau
 end
