@@ -88,7 +88,7 @@ function poletomps(::Fermionic, sites, β, ω)
         R = length(sites)
         sites_ = [Index(2, "Qubit,τ=$n") for n in 1:R]
         tmp = reverseaxis(Quantics.expqtt(sites_, β * ω); tag="τ", bc=1)
-        res = shiftaxis(tmp, +1; tag="τ", bc=1) * (-exp(β * ω/2^R))
+        res = shiftaxis(tmp, +1; tag="τ", bc=1) * (-exp(β * ω / 2^R))
         for n in 1:R
             replaceind!(res[n], sites_[n] => sites[n])
         end
@@ -96,6 +96,5 @@ function poletomps(::Fermionic, sites, β, ω)
     end
     return expqtt(sites, -β * ω) / (-1 - exp(-β * ω))
 end
-
 
 poletomps(sites, β, ω) = poletomps(Fermionic(), sites, β, ω)

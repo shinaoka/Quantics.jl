@@ -114,7 +114,8 @@ function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
             push!(newinds[end], links[pos])
         end
         tensor_data = ITensors.data(permute(copy(M[pos]), targetsites[n], links_...))
-        tensors[pos] = split_tensor(ITensor(tensor_data, newsites[n]..., links_...), newinds)
+        tensors[pos] = split_tensor(ITensor(tensor_data, newsites[n]..., links_...),
+            newinds)
     end
 
     tensors_ = ITensor[]
