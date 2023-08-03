@@ -4,6 +4,14 @@ ITensors.disable_warn_order()
 using Quantics
 import Random
 
+function _sign(bc::Int, nmod)::Int
+    if bc == 0
+        return nmod == 0 ? 1 : 0
+    else
+        return bc^abs(nmod)
+    end
+end
+
 @testset "binaryop.jl" begin
     @testset "_binaryop" for rev_carrydirec in [true], nbit in 2:3
         Random.seed!(1)
@@ -26,7 +34,7 @@ import Random
         sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
         rsites = reverse(sites)
 
-        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
+        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, 0, -1], bc_y in [1, 0, -1]
             g = randomMPS(sites)
             M = Quantics._binaryop_mpo(sites, [(a, b), (c, d)], [(1, 2), (1, 2)];
                 rev_carrydirec=rev_carrydirec, bc=[bc_x, bc_y])
@@ -47,7 +55,7 @@ import Random
                 yp_ = c * x + d * y
                 nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
                 nmody, yp = divrem(yp_, 2^nbit, RoundDown)
-                return xp, yp, bc_x^nmodx, bc_y^nmody
+                return xp, yp, _sign(bc_x, nmodx), _sign(bc_y, nmody)
             end
 
             f_vec_ref = similar(f_vec)
@@ -80,7 +88,7 @@ import Random
         sitesy = [sites[findfirst(x -> hastags(x, "y=$n"), sites)] for n in 1:nbit]
         shift = rand((-2 * 2^nbit):(2 * 2^nbit), 2)
 
-        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, -1], bc_y in [1, -1]
+        for a in -1:1, b in -1:1, c in -1:1, d in -1:1, bc_x in [1, 0, -1], bc_y in [1, 0, -1]
             g = randomMPS(sites)
             f = Quantics.affinetransform(g, ["x", "y"],
                 [Dict("x" => a, "y" => b), Dict("x" => c, "y" => d)],
@@ -101,7 +109,7 @@ import Random
                 yp_ = c * x + d * y + shift[2]
                 nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
                 nmody, yp = divrem(yp_, 2^nbit, RoundDown)
-                return xp, yp, bc_x^nmodx, bc_y^nmody
+                return xp, yp, _sign(bc_x, nmodx), _sign(bc_y, nmody)
             end
 
             f_vec_ref = similar(f_vec)
@@ -215,7 +223,7 @@ import Random
             nmodx, xp = divrem(xp_, 2^nbit, RoundDown)
             nmody, yp = divrem(yp_, 2^nbit, RoundDown)
             nmodz, zp = divrem(zp_, 2^nbit, RoundDown)
-            return xp, yp, zp, bc_x^nmodx, bc_y^nmody, bc_z^nmodz
+            return xp, yp, zp, _sign(bc_x, nmodx), _sign(bc_y, nmody), _sign(bc_z, nmodz)
         end
 
         f_vec_ref = similar(f_vec)

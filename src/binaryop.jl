@@ -18,7 +18,7 @@ function _binaryop_tensor(a::Int, b::Int, site_x::Index{T}, site_y::Index{T},
     cin_on::Bool, cout_on::Bool, bc::Int) where {T}
     abs(a) <= 1 || error("a must be either 0, 1, -1")
     abs(b) <= 1 || error("b must be either 0, 1, -1")
-    abs(bc) == 1 || error("bc must be either 1, -1")
+    abs(bc) <= 1 || error("bc must be either 1, -1, 0")
     a + b != -2 || error("a = -1 and b = -1 not supported")
 
     cins = cin_on ? [-1, 0, 1] : [0]
@@ -254,7 +254,7 @@ function affinetransform(M::MPS,
 
     for v in 1:ntransvars
         if sign_flips[v]
-            M = bc[v] * reverseaxis(M; tag=tags[v], bc=bc[v], kwargs...)
+            M = reverseaxis(M; tag=tags[v], bc=bc[v], to_negativedomain=true, kwargs...)
         end
     end
 
@@ -326,8 +326,12 @@ function _binaryop_mpo(sites::Vector{Index{T}},
         if !sign_flips[i]
             continue
         end
-        M_ = bc[i] *
-             flipop(sites[i:nsites_bop:end]; rev_carrydirec=rev_carrydirec, bc=bc[i])
+        if bc[i] == 0
+            M_ = onlyzero(sites[i:nsites_bop:end])
+        else
+            M_ = bc[i] *
+                 flipop(sites[i:nsites_bop:end]; rev_carrydirec=rev_carrydirec, bc=bc[i])
+        end
         M = apply(M, matchsiteinds(M_, sites); cutoff=1e-25)
     end
 

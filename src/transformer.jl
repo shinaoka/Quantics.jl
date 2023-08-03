@@ -13,6 +13,15 @@ function _single_tensor_flip()
     return single_tensor
 end
 
+function onlyzero(sites)::MPO
+    N = length(sites)
+    links = [Index(1, ITensors.defaultlinktags(b)) for b in 0:N]
+    op = MPO([onehot(links[n]=>1, links[n+1]=>1, sites[n]=>1, sites[n]'=>1) for n in 1:N])
+    op[1] *= onehot(links[1] => 1)
+    op[end] *= onehot(links[end] => 1)
+    return op
+end
+
 """
 This function returns an MPO, M, representing the transformation
 f(x) = g(-x)
@@ -20,7 +29,19 @@ where f(x) = M * g(x) for x = 0, 1, ..., 2^R-1.
 """
 function flipop_to_negativedomain(sites::Vector{Index{T}}; rev_carrydirec=false,
     bc::Int=1)::MPO where {T}
-    return flipop(sites; rev_carrydirec=rev_carrydirec, bc=bc) * bc
+    abs(bc) <= 1 || error("bc must be either 1, 0, -1")
+    if abs(bc) == 1
+        return flipop(sites; rev_carrydirec=rev_carrydirec, bc=bc) * bc
+    elseif bc == 0
+        # If bc == 0, only x = 0 survives.
+        #N = length(sites)
+        #links = [Index(1, ITensors.defaultlinktags(b)) for b in 0:N]
+        #op = MPO([onehot(links[n]=>1, links[n+1]=>1, sites[n]=>1, sites[n]'=>1) for n in 1:N])
+        #op[1] *= onehot(links[1] => 1)
+        #op[end] *= onehot(links[end] => 1)
+        #return op
+        return onlyzero(sites)
+    end
 end
 
 """
@@ -37,7 +58,7 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     end
 
     N = length(sites)
-    abs(bc) == 1 || error("bc must be either 1, -1")
+    abs(bc) <= 1 || error("bc must be either 1, 0, -1")
     N > 1 || error("MPO with one tensor is not supported")
 
     t = _single_tensor_flip()
@@ -57,14 +78,19 @@ function flipop(sites::Vector{Index{T}}; rev_carrydirec=false, bc::Int=1)::MPO w
     return M
 end
 
-@doc """
-f(x) = g(N - x) = M * g(x) for x = 0, 1, ..., N-1,
+@doc raw"""
+`to_negativedomain` == `false` (default):
+    f(x) = g(N - x) = M * g(x) for x = 0, 1, ..., N-1.
+
+`to_negativedomain` == `true`:
+    f(x) = g(-x) = M * g(x) for x = 0, 1, ..., N-1.
+
 where x = 0, 1, ..., N-1 and N = 2^R.
 
 Note that x = 0, 1, 2, ..., N-1 are mapped to x = 0, N-1, N-2, ..., 1 mod N.
 """
-function reverseaxis(M::MPS; tag="x", bc::Int=1, kwargs...)
-    bc ∈ [1, -1] || error("bc must be either 1 or -1")
+function reverseaxis(M::MPS; tag="x", bc::Int=1, to_negativedomain=false, kwargs...)
+    abs(bc) <= 1 || error("bc must be either 1, 0, -1")
 
     sites = siteinds(M)
     targetsites = findallsiteinds_by_tag(sites; tag=tag)
@@ -72,16 +98,19 @@ function reverseaxis(M::MPS; tag="x", bc::Int=1, kwargs...)
     !isascendingordescending(pos) && error("siteinds for tag $(tag) must be sorted.")
     rev_carrydirec = isascendingorder(pos)
     siteinds_MPO = rev_carrydirec ? targetsites : reverse(targetsites)
-    transformer_tag = flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc)
+    transformer_tag = to_negativedomain ? 
+        flipop_to_negativedomain(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc) :
+        flipop(siteinds_MPO; rev_carrydirec=rev_carrydirec, bc=bc)
     transformer = matchsiteinds(transformer_tag, sites)
     return apply(transformer, M; kwargs...)
 end
 
 """
-f(x) = g(x + shift) for x = 0, 1, ..., 2^R-1 and 0 <= shift < 2^R.
+f(x) = g(x + shift) for x = 0, 1, ..., 2^R-1
 """
 function shiftaxis(M::MPS, shift::Int; tag="x", bc::Int=1, kwargs...)
     bc ∈ [1, -1] || error("bc must be either 1 or -1")
+    #bc <= 1 || error("bc must be either 1 or -1")
 
     sites = siteinds(M)
     targetsites = findallsiteinds_by_tag(sites; tag=tag) # From left to right: x=1, 2, ...

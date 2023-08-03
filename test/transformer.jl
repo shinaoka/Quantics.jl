@@ -53,7 +53,27 @@ using LinearAlgebra
         @test f_reconst ≈ f_ref
     end
 
-    @testset "reverseaxis" for bc in [1], nbit in 2:2, rev_carrydirec in [true, false]
+    @testset "flipop_to_negativedomain" for nbit in [2,3], rev_carrydirec in [true], bc in -1:1
+        sites = siteinds("Qubit", nbit)
+
+        g = randomMPS(rev_carrydirec ? sites : reverse(sites))
+
+        op = Quantics.flipop_to_negativedomain(siteinds(g); rev_carrydirec=rev_carrydirec, bc=bc)
+        f = apply(op, g; alg="naive")
+        g_reconst = vec(Array(reduce(*, g), reverse(sites)))
+        f_reconst = vec(Array(reduce(*, f), reverse(sites)))
+
+        f_ref = similar(f_reconst)
+        for i in 0:(2^nbit - 1)
+            nmod, i_ = divrem(-i, 2^nbit, RoundDown)
+            f_ref[i + 1] = g_reconst[i_ + 1] * (bc^abs(nmod))
+        end
+
+        @test f_reconst ≈ f_ref
+    end
+
+    @testset "reverseaxis" for bc in -1:1, nbit in 2:2, rev_carrydirec in [true, false]
+        # f(x) = g(N-x)
         sitesx = [Index(2, "x=$x") for x in 1:nbit]
         sites = rev_carrydirec ? sitesx : reverse(sitesx)
 
@@ -64,10 +84,36 @@ using LinearAlgebra
         f_reconst = vec(Array(reduce(*, f), reverse(sitesx)))
 
         f_ref = similar(f_reconst)
-        for i in 1:(2^nbit)
-            f_ref[i] = g_reconst[mod(2^nbit - (i - 1), 2^nbit) + 1]
+        #for i in 1:(2^nbit)
+            #f_ref[i] = g_reconst[mod(2^nbit - (i - 1), 2^nbit) + 1]
+        #end
+        #f_ref[1] *= bc
+        for i in 0:(2^nbit-1)
+            nmod, i_ = divrem(2^nbit - i, 2^nbit, RoundDown)
+            f_ref[i + 1] = g_reconst[i_ + 1] * (bc^abs(nmod))
         end
-        f_ref[1] *= bc
+
+        @assert f_reconst ≈ f_ref
+    end
+
+    @testset "reverseaxis_to_negativedomain" for bc in -1:1, nbit in 2:2, rev_carrydirec in [true]
+        # f(x) = g(-x)
+        sitesx = [Index(2, "x=$x") for x in 1:nbit]
+        sites = rev_carrydirec ? sitesx : reverse(sitesx)
+
+        g = randomMPS(sites)
+
+        f = Quantics.reverseaxis(g; tag="x", alg="naive", bc=bc, to_negativedomain=true)
+        g_reconst = vec(Array(reduce(*, g), reverse(sitesx)))
+        f_reconst = vec(Array(reduce(*, f), reverse(sitesx)))
+
+        f_ref = similar(f_reconst)
+        for i in 0:(2^nbit-1)
+            nmod, i_ = divrem(-i, 2^nbit, RoundDown)
+            f_ref[i + 1] = g_reconst[i_ + 1] * (bc^abs(nmod))
+        end
+
+        @assert f_reconst ≈ f_ref
     end
 
     @testset "reverseaxis2" for nbit in 2:3, rev_carrydirec in [true, false]
@@ -108,7 +154,6 @@ using LinearAlgebra
         @test fy_reconst ≈ fy_ref
     end
 
-    #@testset "reverseaxis3" for nbit in 2:3, rev_carrydirec in [true, false]
     @testset "reverseaxis3" for nbit in [2], rev_carrydirec in [true]
         N = 2^nbit
 
