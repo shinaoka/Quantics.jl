@@ -91,8 +91,48 @@ target_sites: Vector of siteinds to be split
 new_sites: Vector of vectors of new siteinds
 
 When splitting MPS tensors, the column major is assumed.
+The tensor data will be deepcopied.
 """
 function unfuse_siteinds(M::MPS, targetsites::Vector{Index{T}},
+    newsites::AbstractVector{Vector{Index{T}}}; splittensor=true)::Union{MPS,MPO} where {T}
+    length(targetsites) == length(newsites) || error("Length mismatch")
+
+    if splittensor
+        return unfuse_siteinds_split(M, targetsites, newsites)
+    else
+        return unfuse_siteinds_nosplit(M, targetsites, newsites)
+    end
+end
+
+function unfuse_siteinds_nosplit(M::MPS, targetsites::Vector{Index{T}},
+    newsites::AbstractVector{Vector{Index{T}}})::MPO where {T}
+
+    length(targetsites) == length(newsites) || error("Length mismatch")
+    links = linkinds(M)
+    L = length(M)
+
+    M_ = deepcopy(M)
+
+    for n in 1:length(targetsites)
+        pos = findsite(M, targetsites[n])
+        !isnothing(pos) || error("Target site not found: $(targetsites[n])")
+
+        # Links
+        links_ = Index[]
+        if pos > 1
+            push!(links_, links[pos - 1])
+        end
+        if pos < L
+            push!(links_, links[pos])
+        end
+
+        M_[pos] = ITensor(ITensors.data(permute(M_[pos], targetsites[n], links_...)), newsites[n]..., links_...)
+    end
+
+    return M_
+end
+
+function unfuse_siteinds_split(M::MPS, targetsites::Vector{Index{T}},
     newsites::AbstractVector{Vector{Index{T}}})::MPS where {T}
     length(targetsites) == length(newsites) || error("Length mismatch")
     links = linkinds(M)

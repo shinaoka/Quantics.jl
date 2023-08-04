@@ -61,6 +61,23 @@ using ITensors
               vec(Array(reduce(*, mps), sites))
     end
 
+    @testset "unfuse_siteinds (splittensor=false)" for nsites in [2, 4], R in [2, 3]
+        sites = [Index(2^R, "csite=$s") for s in 1:nsites]
+
+        bonddim = 3
+        mps = randomMPS(sites; linkdims=bonddim)
+
+        newsites = [[Index(2, "n=$n,m=$m") for m in 1:R] for n in 1:nsites]
+
+        mps_split = Quantics.unfuse_siteinds_nosplit(mps, sites, newsites)
+
+        newsites_flatten = collect(Iterators.flatten(newsites))
+        @test newsites == siteinds(mps_split)
+        @test vec(Array(reduce(*, mps_split), newsites_flatten)) ≈
+              vec(Array(reduce(*, mps), sites))
+    end
+
+
     @testset "split_tensor" begin
         nsite = 6
         sites = [Index(2, "Qubit, site=$n") for n in 1:nsite]
